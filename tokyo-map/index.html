@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f5f2">
+<title>도쿄 저장 지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 왼쪽은 실제 해안선·구 경계·강·공원 위에 야마노테선을 얹은 지도(고정), 오른쪽은 장소 목록과 코스 탭 */
+:root{
+  --bg:#f3f5f2; --panel:#ffffff; --ink:#18201b; --muted:#66706a; --line:#dfe4de; --soft:#eaeee9;
+  --rail:#7ab83b; --chuo:#e8762d; --accent:#1d6b47; --accent-ink:#ffffff; --route:#26304a; --route-ink:#ffffff;
+  --water:#cddfe8; --land:#f8f9f6; --land-out:#eceee9; --ward:#cfd6cd; --ward-hi:#e3efe6; --park:#d5e7cb; --river:#a6c6da;
+  --c-shop:#d4532c; --c-food:#2a66c9; --c-cafe:#a87412; --c-bar:#8340ad; --c-stay:#0f8585; --c-sight:#c03670;
+  --t0:#2a66c9; --t1:#d4532c; --t2:#1f8a5b; --t3:#8340ad; --t4:#c03670; --t5:#a87412; --t6:#0f8585; --t-etc:#7b8494;
+  --f-display:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Apple SD Gothic Neo",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111613; --panel:#19201c; --ink:#e8ede9; --muted:#97a19b; --line:#2b342f; --soft:#212924;
+  --rail:#8ccb4c; --chuo:#f0904f; --accent:#5cc28f; --accent-ink:#0d1a13; --route:#e9edf7; --route-ink:#141a2a;
+  --water:#0f1d26; --land:#1b221e; --land-out:#161c19; --ward:#323d37; --ward-hi:#22362b; --park:#1f3424; --river:#29506a;
+  --c-shop:#f0784f; --c-food:#6b9bf0; --c-cafe:#d9a43a; --c-bar:#b47ae0; --c-stay:#3cbcbc; --c-sight:#ec6c9f;
+  --t0:#6b9bf0; --t1:#f0784f; --t2:#4cc38a; --t3:#b47ae0; --t4:#ec6c9f; --t5:#d9a43a; --t6:#3cbcbc; --t-etc:#98a1b0;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111613; --panel:#19201c; --ink:#e8ede9; --muted:#97a19b; --line:#2b342f; --soft:#212924;
+  --rail:#8ccb4c; --chuo:#f0904f; --accent:#5cc28f; --accent-ink:#0d1a13; --route:#e9edf7; --route-ink:#141a2a;
+  --water:#0f1d26; --land:#1b221e; --land-out:#161c19; --ward:#323d37; --ward-hi:#22362b; --park:#1f3424; --river:#29506a;
+  --c-shop:#f0784f; --c-food:#6b9bf0; --c-cafe:#d9a43a; --c-bar:#b47ae0; --c-stay:#3cbcbc; --c-sight:#ec6c9f;
+  --t0:#6b9bf0; --t1:#f0784f; --t2:#4cc38a; --t3:#b47ae0; --t4:#ec6c9f; --t5:#d9a43a; --t6:#3cbcbc; --t-etc:#98a1b0;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:1400px;margin:0 auto;padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;align-items:center}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.roundel{width:44px;height:44px;border-radius:50%;border:5px solid var(--rail);display:grid;place-items:center;
+  font-family:var(--f-display);font-weight:900;font-size:14px;flex:none;background:var(--panel)}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(22px,3vw,30px);line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.stats{display:flex;gap:18px;font-variant-numeric:tabular-nums}
+.stat b{display:block;font-family:var(--f-display);font-weight:900;font-size:22px;line-height:1}
+.stat span{font-size:11px;color:var(--muted);letter-spacing:.04em}
+
+.controls{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.search{flex:1 1 220px;min-width:0;display:flex;align-items:center;gap:8px;background:var(--soft);border-radius:8px;padding:0 10px;height:38px}
+.search input{border:0;background:transparent;outline:0;flex:1;min-width:0;height:100%}
+.search svg{flex:none;color:var(--muted)}
+select{height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel);padding:0 10px}
+.seg{display:inline-flex;background:var(--soft);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;border-radius:6px;padding:5px 10px;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--panel);font-size:13px;white-space:nowrap}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:var(--c,var(--muted))}
+.chip .n{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip[aria-pressed="true"] .n{color:inherit;opacity:.7}
+.chips.subs .chip{height:28px;font-size:12px;padding:0 10px}
+
+.main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+.mapbox{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);height:calc(100vh - 40px);max-height:860px;min-height:440px;
+  background:var(--water);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+#map{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#map.drag{cursor:grabbing}
+.areas{position:absolute;left:10px;right:56px;top:10px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.areas::-webkit-scrollbar{display:none}
+.areas button{flex:none;height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 92%,transparent);font-size:12px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.areas button:hover{border-color:var(--ink)}
+.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.zoom button{width:36px;height:36px;border:0;background:transparent;font-size:18px;line-height:1;display:grid;place-items:center}
+.zoom button+button{border-top:1px solid var(--line)}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 10px;max-width:calc(100% - 20px);
+  background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--muted)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
+.legend .ln{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:4px;vertical-align:2px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:4px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-150%);display:none;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+
+.peek{position:absolute;left:10px;right:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);
+  padding:12px 12px 12px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;border-left:5px solid var(--c)}
+.peek .x{position:absolute;right:6px;top:4px;border:0;background:transparent;color:var(--muted);font-size:18px;width:28px;height:28px}
+.peek .pn{font-family:var(--f-display);font-weight:700;font-size:16px;line-height:1.3;overflow-wrap:anywhere;padding-right:20px}
+.peek .pa{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.tabs button{border:0;background:transparent;padding:8px 12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
+.tabs .badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:11px;line-height:18px;margin-left:4px;font-family:var(--f-mono)}
+
+.listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:var(--muted);font-size:13px}
+.listhead b{color:var(--ink);font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;gap:8px}
+.card{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:0 12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px 11px 0;overflow:hidden;scroll-margin:80px}
+.cmain{min-width:0;cursor:pointer}
+.card .name{margin:0 0 2px;font-size:15px}
+.name .st,.rn .st{color:#e0a100;vertical-align:-1px;margin-right:4px}
+.inc{color:var(--route);font-weight:600}
+.list{gap:6px}
+.card .bar{align-self:stretch;background:var(--c);border-radius:0 3px 3px 0}
+.card.sel{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 30%,transparent)}
+.card.visited .name{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;color:var(--muted)}
+.cat{color:var(--c);font-weight:600}
+.name{font-family:var(--f-display);font-weight:700;font-size:16px;line-height:1.3;margin:2px 0 6px;overflow-wrap:anywhere;cursor:pointer}
+.name:hover{text-decoration:underline;text-underline-offset:3px}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:11px;padding:1px 7px;border-radius:4px;background:var(--soft);color:var(--muted)}
+.acts{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.grp{display:flex;gap:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:32px;padding:0 11px;border-radius:7px;border:1px solid var(--line);background:var(--panel);font-size:12px;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.on{border-color:var(--route);color:var(--route);font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
+.ic{width:32px;height:32px;border-radius:7px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;color:var(--muted);padding:0}
+.ic[aria-pressed="true"].fav{color:#e0a100;border-color:#e0a100}
+.ic[aria-pressed="true"].vis{color:var(--accent);border-color:var(--accent)}
+.empty{padding:32px 16px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:var(--r)}
+
+/* 코스 */
+.days{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.days .chip{height:30px}
+.csum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.csum .big{font-family:var(--f-display);font-weight:900;font-size:18px;font-variant-numeric:tabular-nums}
+.csum .small{font-size:12px;color:var(--muted)}
+.cacts{display:flex;flex-wrap:wrap;gap:6px}
+.stops{display:flex;flex-direction:column}
+.stop{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+.num{width:26px;height:26px;border-radius:50%;background:var(--route);color:var(--route-ink);display:grid;place-items:center;font-family:var(--f-mono);font-size:12px}
+.stop .sn{font-family:var(--f-display);font-weight:700;line-height:1.3;overflow-wrap:anywhere;cursor:pointer}
+.stop .sm{font-size:12px;color:var(--muted)}
+.stop .ctl{display:flex;gap:2px}
+.stop .ctl button{width:28px;height:28px;border:1px solid var(--line);background:var(--panel);border-radius:6px;color:var(--muted);padding:0;display:grid;place-items:center}
+.stop .ctl button:disabled{opacity:.35}
+.leg{display:flex;align-items:center;gap:8px;padding:6px 0 6px 22px;font-size:12px;color:var(--muted);border-left:2px dashed var(--route);margin-left:23px}
+.leg a{color:var(--accent);font-weight:600;text-decoration:none}
+.leg a:hover{text-decoration:underline}
+.routes{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.foot{font-size:12px;color:var(--muted)}
+
+/* 주변 추천 */
+.recbase{margin-bottom:10px}
+.chip svg{flex:none}
+.rtop{display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.rtop .big{font-family:var(--f-display);font-weight:900;font-size:17px;line-height:1.25}
+.rtop .small{font-size:12px;color:var(--muted)}
+.rech{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 6px}
+.rech h3{margin:0;font-family:var(--f-display);font-weight:700;font-size:15px}
+.rech .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:7px;vertical-align:1px}
+.rech span{font-size:12px;color:var(--muted)}
+.ritem{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:0 10px;align-items:center;padding:9px 10px 9px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:6px;overflow:hidden}
+.ritem .bar{align-self:stretch;background:var(--c);border-radius:0 3px 3px 0}
+.ritem .rn{font-family:var(--f-display);font-weight:700;line-height:1.3;overflow-wrap:anywhere;cursor:pointer}
+.ritem .rn svg{color:#e0a100;vertical-align:-2px;margin-right:3px}
+.ritem .rm{font-size:12px;color:var(--muted)}
+.ritem .ra{display:flex;gap:4px}
+.toast{position:absolute;left:50%;top:calc(var(--top-h,56px) + 12px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:calc(100% - 32px);text-align:center}
+.zoom button.busy{opacity:.45}
+.sheet-grab,.mfilters{display:none}
+
+/* 폰: 지도를 화면 전체에 깔고, 검색·분류는 위에 띄우고, 목록·추천·코스는 아래 시트로 */
+@media (max-width:860px){
+  html,body{overflow:hidden}
+  body{padding:0}
+  .wrap{padding:0;display:block}
+  header.top{display:none}
+  .controls{position:fixed;z-index:30;top:0;left:0;right:0;background:transparent;border:0;border-radius:0;
+    padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 0;gap:8px;pointer-events:none}
+  .controls>*{pointer-events:auto}
+  .search{height:46px;flex-basis:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.14);font-size:16px}
+  .controls .chips{margin:0 -12px;padding:0 12px 4px;pointer-events:auto}
+  .controls .chip{box-shadow:0 1px 4px rgba(0,0,0,.14)}
+  .main{display:block}
+  .mapbox{position:fixed;inset:0;height:auto;max-height:none;min-height:0;border:0;border-radius:0}
+  .areas,.legend{display:none!important}
+  .zoom{top:calc(var(--top-h,120px) + 8px)}
+  .zoom #zin,.zoom #zout{display:none}
+  .zoom button{width:42px;height:42px}
+  .peek{bottom:calc(var(--sheet-vis,150px) + 10px);transition:bottom .26s}
+  .sheet{position:fixed;z-index:40;left:0;right:0;bottom:0;height:calc(100dvh - var(--top-h,120px) + 4px);background:var(--bg);
+    border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.16);display:flex;flex-direction:column;will-change:transform}
+  .sheet-grab{display:block;height:22px;flex:none;touch-action:none;cursor:grab}
+  .sheet-grab::before{content:"";display:block;width:40px;height:5px;border-radius:3px;background:var(--line);margin:9px auto 0}
+  .sheet .tabs{padding:0 12px;margin:0;flex:none;touch-action:none}
+  .sheet .tabs button{flex:1;padding:10px 4px}
+  .sheet-body{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(env(safe-area-inset-bottom,0px) + 28px);overscroll-behavior:contain}
+  .mfilters{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .mfilters select{width:100%}
+  .foot{margin-top:18px}
+}
+@media (max-width:440px){
+  .peek{grid-template-columns:1fr}
+  .peek .pa{justify-content:flex-start}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+  <header class="top"><h1>도쿄 저장 지도</h1></header>
+
+  <section class="controls" id="controls" aria-label="필터">
+    <div class="row" id="ctlrow">
+      <label class="search" for="q">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="가게 이름, 동네 검색" autocomplete="off">
+      </label>
+      <select id="ward" aria-label="지역"></select>
+      <div class="seg" role="group" aria-label="상태">
+        <button data-only="all" aria-pressed="true">전체</button>
+        <button data-only="fav" aria-pressed="false">꼭 가기</button>
+        <button data-only="todo" aria-pressed="false">안 가본 곳</button>
+        <button data-only="visited" aria-pressed="false">다녀온 곳</button>
+      </div>
+    </div>
+    <div class="chips" id="cats" role="group" aria-label="분류"></div>
+    <div class="chips subs" id="subs" role="group" aria-label="세부 분류" hidden></div>
+  </section>
+
+  <div class="main">
+    <div class="mapbox" id="mapbox">
+      <svg id="map" aria-label="도쿄 장소 지도"></svg>
+      <div class="areas" id="areas" aria-label="동네 바로가기"></div>
+      <div class="zoom">
+        <button id="zin" aria-label="확대">+</button>
+        <button id="zout" aria-label="축소">−</button>
+        <button id="zfit" aria-label="전체 보기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <button id="zme" aria-label="내 위치"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="peek" id="peek" hidden></div>
+      <div class="tip" id="tip"></div>
+      <div class="toast" id="toast" hidden></div>
+    </div>
+
+    <section class="sheet" id="sheet" aria-label="추천, 목록, 코스">
+      <div class="sheet-grab" id="grab" aria-hidden="true"></div>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-rec" aria-selected="false">근처 추천</button>
+        <button role="tab" id="tab-list" aria-selected="true">목록</button>
+        <button role="tab" id="tab-course" aria-selected="false">코스 <span class="badge" id="cbadge">0</span></button>
+      </div>
+      <div class="sheet-body" id="sheetBody">
+
+      <div id="pane-rec" hidden>
+        <div class="chips recbase" id="recbase"></div>
+        <div id="rec"></div>
+      </div>
+
+      <div id="pane-list">
+        <div class="mfilters" id="mfilters"></div>
+        <div class="listhead"><span><b id="cnt">0</b>곳</span>
+          <select id="sort" aria-label="정렬">
+            <option value="ward">지역순</option>
+            <option value="name">이름순</option>
+            <option value="cat">분류순</option>
+          </select>
+        </div>
+        <div class="list" id="list"></div>
+      </div>
+
+      <div id="pane-course" hidden>
+        <div class="days" id="days"></div>
+        <div id="course"></div>
+      </div>
+      </div>
+    </section>
+  </div>
+  <div class="foot">꼭 가기·다녀온 곳·코스는 이 기기에만 저장돼요. 지도 © OpenStreetMap 기여자, dataofjapan/land</div>
+</div>
+
+<script>
+const PLACES = [{"n":"AEON STYLE Ariake Garden Store","c":"쇼핑","s":"마트·식료품","d":"고토구","lat":35.638351,"lng":139.793372,"cid":"2764661695501181884","src":"별표 표시된 장소","h":"도요스·오다이바"},{"n":"Stüssy DiverCity Tokyo Plaza Chapter","c":"쇼핑","s":"의류·신발·패션","d":"고토구","lat":35.624723,"lng":139.77512,"cid":"5436946979845301592","src":"가고 싶은 장소","h":"그 밖의 지역"},{"n":"うなぎ明月川 豊洲店","c":"식당","s":"장어","d":"고토구","lat":35.645225,"lng":139.783874,"cid":"4439288754331011446","src":"별표 표시된 장소","t":"장어","h":"도요스·오다이바"},{"n":"浅草茶屋 たばねのし 豊洲店","c":"카페·디저트","s":"디저트","d":"고토구","lat":35.645831,"lng":139.783092,"cid":"1238779205468607539","src":"별표 표시된 장소","t":"화과자·찻집","h":"도요스·오다이바"},{"n":"逸品屋えどこ","c":"쇼핑","s":"잡화·생활·굿즈","d":"고토구","lat":35.644958,"lng":139.783749,"cid":"7909344187791313837","src":"별표 표시된 장소","h":"도요스·오다이바"},{"n":"다이와 스시","c":"식당","s":"스시·해산물","d":"고토구","lat":35.644788,"lng":139.786032,"cid":"7225947371004553622","src":"가고 싶은 장소","t":"스시·해산물","h":"도요스·오다이바"},{"n":"라비스타 도쿄베이","c":"숙소","s":"호텔","d":"고토구","lat":35.64665,"lng":139.784009,"cid":"248776108691945538","src":"숙소 / 가고 싶은 장소","h":"도요스·오다이바"},{"n":"마루시치 혼텐","c":"식당","s":"돈카츠·튀김","d":"고토구","lat":35.673504,"lng":139.794844,"cid":"11846842331063618326","src":"2027 visit","t":"돈카츠·규카츠","h":"그 밖의 지역"},{"n":"스시 다이","c":"식당","s":"스시·해산물","d":"고토구","lat":35.644301,"lng":139.782453,"cid":"16054358613555094098","src":"가고 싶은 장소","t":"스시·해산물","h":"도요스·오다이바"},{"n":"이온몰 시노노메점","c":"쇼핑","s":"마트·식료품","d":"고토구","lat":35.648562,"lng":139.802152,"cid":"1758414204718559642","src":"별표 표시된 장소","h":"도요스·오다이바"},{"n":"츠키시마 몬쟈 쥬고야","c":"식당","s":"일식 간편식","d":"고토구","lat":35.646,"lng":139.78316,"cid":"8404541129662153110","src":"별표 표시된 장소","t":"몬자","h":"도요스·오다이바"},{"n":"APA 호텔 아사쿠사 다와라마치 에키마에","c":"숙소","s":"호텔","d":"다이토구","lat":35.710269,"lng":139.790102,"cid":"5312185307243118128","src":"가고 싶은 장소","h":"아사쿠사"},{"n":"Giraffa Asakusa","c":"카페·디저트","s":"베이커리","d":"다이토구","lat":35.714222,"lng":139.794671,"cid":"6378396719844297604","src":"별표 표시된 장소","t":"카레빵","h":"아사쿠사"},{"n":"Gyutan Biyori Asakusabashi","c":"식당","s":"고기·야키니쿠","d":"다이토구","lat":35.697456,"lng":139.785497,"cid":"1374899519952012802","src":"2027 visit","t":"고기·야키니쿠","h":"아키하바라"},{"n":"Ichikawa Tempura","c":"식당","s":"돈카츠·튀김","d":"다이토구","lat":35.717694,"lng":139.792459,"cid":"149078325795611949","src":"별표 표시된 장소","t":"덴푸라","h":"아사쿠사"},{"n":"Koko","c":"술집","s":"기타","d":"다이토구","lat":35.720325,"lng":139.795078,"cid":"3887117128444485951","src":"Tokyo food / 가고 싶은 장소","t":"바","h":"아사쿠사"},{"n":"L'atelier Daijiro","c":"카페·디저트","s":"디저트","d":"다이토구","lat":35.719003,"lng":139.799139,"cid":"16908041243418784611","src":"가고 싶은 장소","t":"디저트","h":"아사쿠사"},{"n":"Monblanc","c":"식당","s":"양식","d":"다이토구","lat":35.711472,"lng":139.793461,"cid":"9159692825412977615","src":"가고 싶은 장소","t":"함박스테이크","h":"아사쿠사"},{"n":"Nihonkai Kototoi Shop","c":"식당","s":"스시·해산물","d":"다이토구","lat":35.718836,"lng":139.78665,"cid":"1013499667454210615","src":"별표 표시된 장소","t":"스시·해산물","h":"아사쿠사"},{"n":"Tonkatsu Juroku","c":"식당","s":"돈카츠·튀김","d":"다이토구","lat":35.71027,"lng":139.792536,"cid":"2220736010531980304","src":"가고 싶은 장소","t":"돈카츠·규카츠","h":"아사쿠사"},{"n":"YAYOI","c":"식당","s":"일식 간편식","d":"다이토구","lat":35.708871,"lng":139.791472,"cid":"6780440135693525075","src":"가고 싶은 장소","t":"정식","h":"아사쿠사"},{"n":"栃木家商店","c":"쇼핑","s":"마트·식료품","d":"다이토구","lat":35.712892,"lng":139.797074,"cid":"3476288394207023830","src":"가고 싶은 장소","h":"아사쿠사"},{"n":"肉酒場ちりん","c":"술집","s":"이자카야","d":"다이토구","lat":35.719808,"lng":139.793079,"cid":"13137709667601282231","src":"별표 표시된 장소","t":"고기 이자카야","h":"아사쿠사"},{"n":"규카츠 모토무라 우에노점","c":"식당","s":"돈카츠·튀김","d":"다이토구","lat":35.710445,"lng":139.774453,"cid":"6534178951041514028","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"우에노"},{"n":"나다이 우나토토 우에노점","c":"식당","s":"장어","d":"다이토구","lat":35.711136,"lng":139.774866,"cid":"8904068187524217132","src":"Tokyo food / 가고 싶은 장소","t":"장어","h":"우에노"},{"n":"덴푸라 덴토우","c":"식당","s":"돈카츠·튀김","d":"다이토구","lat":35.713,"lng":139.7942,"cid":"5947806842312342593","src":"별표 표시된 장소","t":"덴푸라","h":"아사쿠사"},{"n":"돈키호테 아사쿠사점","c":"쇼핑","s":"잡화·생활·굿즈","d":"다이토구","lat":35.713864,"lng":139.793083,"cid":"9805974548499589838","src":"별표 표시된 장소","h":"아사쿠사"},{"n":"라이프 아사쿠사점","c":"쇼핑","s":"마트·식료품","d":"다이토구","lat":35.715812,"lng":139.792385,"cid":"11704114743511835299","src":"별표 표시된 장소","h":"아사쿠사"},{"n":"스시로 우에노점","c":"식당","s":"스시·해산물","d":"다이토구","lat":35.710058,"lng":139.775146,"cid":"2840197989756471056","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"우에노"},{"n":"스즈키엔","c":"카페·디저트","s":"디저트","d":"다이토구","lat":35.716344,"lng":139.796939,"cid":"1927186369537713749","src":"가고 싶은 장소","t":"말차 젤라토","h":"아사쿠사"},{"n":"스케마사 커피","c":"카페·디저트","s":"커피","d":"다이토구","lat":35.715242,"lng":139.795393,"cid":"1809100744057433796","src":"가고 싶은 장소","t":"커피","h":"아사쿠사"},{"n":"아사쿠사 규카츠","c":"식당","s":"돈카츠·튀김","d":"다이토구","lat":35.710767,"lng":139.795952,"cid":"15133757769088164000","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"아사쿠사"},{"n":"아사쿠사 규카츠 분점","c":"식당","s":"돈카츠·튀김","d":"다이토구","lat":35.710225,"lng":139.796744,"cid":"8020659423651996912","src":"별표 표시된 장소 / Tokyo food","t":"돈카츠·규카츠","h":"아사쿠사"},{"n":"야도로쿠","c":"식당","s":"일식 간편식","d":"다이토구","lat":35.716885,"lng":139.794751,"cid":"5504304548445465832","src":"짧 / Tokyo food","t":"오니기리","h":"아사쿠사"},{"n":"온야도노노 아사쿠사","c":"숙소","s":"호텔","d":"다이토구","lat":35.715214,"lng":139.794211,"cid":"3475395724774380158","src":"가고 싶은 장소","h":"아사쿠사"},{"n":"이자카야 마메조","c":"술집","s":"이자카야","d":"다이토구","lat":35.702292,"lng":139.783763,"cid":"2939276073475650762","src":"별표 표시된 장소","t":"이자카야","h":"아키하바라"},{"n":"이치란","c":"식당","s":"라멘·면","d":"다이토구","lat":35.712403,"lng":139.77523,"cid":"16960761062031646062","src":"가고 싶은 장소","t":"라멘·면요리","h":"우에노"},{"n":"쯔네 스시","c":"식당","s":"스시·해산물","d":"다이토구","lat":35.711958,"lng":139.794135,"cid":"8201215017643744244","src":"별표 표시된 장소","t":"스시·해산물","h":"아사쿠사"},{"n":"카나자와 마이몬스시 우에노","c":"식당","s":"스시·해산물","d":"다이토구","lat":35.706815,"lng":139.772931,"cid":"9075717514923921101","src":"별표 표시된 장소 / Tokyo food","t":"스시·해산물","h":"우에노"},{"n":"Toriton Ikebukuro Tobu","c":"식당","s":"스시·해산물","d":"도시마구","lat":35.730911,"lng":139.710231,"cid":"16593285428637439984","src":"기본 목록(1) / Tokyo food","t":"스시·해산물","h":"그 밖의 지역"},{"n":"1LDK apartments.","c":"쇼핑","s":"의류·신발·패션","d":"메구로구","lat":35.645751,"lng":139.700169,"cid":"11970188820315218362","src":"가고 싶은 장소","h":"에비스·나카메구로"},{"n":"Coverchord Nakameguro","c":"쇼핑","s":"의류·신발·패션","d":"메구로구","lat":35.646847,"lng":139.696662,"cid":"14278198215103833686","src":"별표 표시된 장소 / 가고 싶은 장소","h":"에비스·나카메구로"},{"n":"CURRY UP","c":"식당","s":"일식 간편식","d":"메구로구","lat":35.639002,"lng":139.698079,"cid":"9416657473639183851","src":"Tokyo food / 가고 싶은 장소","t":"카레","h":"에비스·나카메구로"},{"n":"Ribera Steak House","c":"식당","s":"고기·야키니쿠","d":"메구로구","lat":35.629063,"lng":139.697313,"cid":"6305809165445111569","src":"짧 / Tokyo food","t":"고기·야키니쿠","h":"에비스·나카메구로"},{"n":"덜튼 지유가오카","c":"쇼핑","s":"잡화·생활·굿즈","d":"메구로구","lat":35.608272,"lng":139.671415,"cid":"14579334966134692029","src":"별표 표시된 장소","h":"그 밖의 지역"},{"n":"란마루","c":"식당","s":"스시·해산물","d":"메구로구","lat":35.627063,"lng":139.708687,"cid":"16741795934677041535","src":"가고 싶은 장소","t":"스시·해산물","h":"에비스·나카메구로"},{"n":"SKIT","c":"쇼핑","s":"의류·신발·패션","d":"무사시노시","lat":35.701313,"lng":139.579438,"cid":"17675886507615215618","src":"가고 싶은 장소","h":"기치조지"},{"n":"C.E","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.662813,"lng":139.715937,"cid":"2685989824121619173","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Chrome Hearts","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.660688,"lng":139.716312,"cid":"9875441586880837547","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"COS","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.663562,"lng":139.715188,"cid":"7189375487614091339","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"FAMIMA PARK AZABUDAI","c":"쇼핑","s":"마트·식료품","d":"미나토구","lat":35.662438,"lng":139.744313,"cid":"2837717054352245863","src":"옷","h":"롯폰기·아자부"},{"n":"KAPITAL Legs Roppongi","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.660064,"lng":139.729827,"cid":"6155998456279403498","src":"가고 싶은 장소","h":"롯폰기·아자부"},{"n":"KAPITAL SOHO ROPPONGI","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.65999,"lng":139.72993,"cid":"13145196420750000235","src":"별표 표시된 장소 / 옷","h":"롯폰기·아자부"},{"n":"OTSUMO PLAZA","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.661075,"lng":139.712084,"cid":"8180336959746181705","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Soloist","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.662305,"lng":139.716541,"cid":"10474155761097557703","src":"별표 표시된 장소 / 가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"국립신미술관","c":"관광·문화","s":"미술관·박물관","d":"미나토구","lat":35.665289,"lng":139.726374,"cid":"4622367683473218840","src":"별표 표시된 장소","h":"롯폰기·아자부"},{"n":"멘야 스고","c":"식당","s":"라멘·면","d":"미나토구","lat":35.664574,"lng":139.757624,"cid":"12327923720224562810","src":"별표 표시된 장소 / Tokyo food","t":"라멘·면요리","h":"긴자·유라쿠초"},{"n":"사보이 아자부주반","c":"식당","s":"양식","d":"미나토구","lat":35.654812,"lng":139.736437,"cid":"7969213468898129262","src":"가고 싶은 장소","t":"피자","h":"롯폰기·아자부"},{"n":"소우소우 교토 아오야마점","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.661313,"lng":139.714937,"cid":"17275758790874668940","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"신바시 돼지고기꼬치구이전문 이자카야 야키톤 마코짱 본점","c":"술집","s":"이자카야","d":"미나토구","lat":35.665062,"lng":139.757062,"cid":"13797729009984248247","src":"가고 싶은 장소","t":"야키톤","h":"긴자·유라쿠초"},{"n":"아자부다이 힐즈","c":"쇼핑","s":"백화점·쇼핑몰","d":"미나토구","lat":35.661545,"lng":139.74083,"cid":"4583000254307789249","src":"별표 표시된 장소","h":"롯폰기·아자부"},{"n":"에이치 뷰티 앤 유스","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.664812,"lng":139.714687,"cid":"158814962995762355","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"오라리도쿄","c":"쇼핑","s":"의류·신발·패션","d":"미나토구","lat":35.661187,"lng":139.716438,"cid":"8431304775675655345","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"츠지한 도쿄 미드타운점","c":"식당","s":"스시·해산물","d":"미나토구","lat":35.665563,"lng":139.730687,"cid":"6779706837502363435","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"롯폰기·아자부"},{"n":"츠지한 아카사카아크힐즈점","c":"식당","s":"스시·해산물","d":"미나토구","lat":35.667313,"lng":139.740062,"cid":"2653783987035612021","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"롯폰기·아자부"},{"n":"코문 도쿄 아자부다이힐즈점","c":"카페·디저트","s":"베이커리","d":"미나토구","lat":35.661659,"lng":139.740767,"cid":"7144109650472520048","src":"별표 표시된 장소","t":"빵","h":"롯폰기·아자부"},{"n":"미타카의 숲 지브리 미술관","c":"관광·문화","s":"미술관·박물관","d":"미타카시","lat":35.696188,"lng":139.570437,"cid":"5611860688709652997","src":"가고 싶은 장소","h":"기치조지"},{"n":"Sushi Edo Fuji","c":"식당","s":"스시·해산물","d":"분쿄구","lat":35.704062,"lng":139.765312,"cid":"4544194263912559077","src":"2027 visit","t":"스시·해산물","h":"아키하바라"},{"n":"APFR TOKYO","c":"쇼핑","s":"향수·뷰티","d":"세타가야구","lat":35.663354,"lng":139.669884,"cid":"9408685749959371399","src":"별표 표시된 장소","h":"시모키타자와"},{"n":"BIG TIME Shimokitazawa","c":"쇼핑","s":"의류·신발·패션","d":"세타가야구","lat":35.662687,"lng":139.666459,"cid":"12789198150894919417","src":"별표 표시된 장소","h":"시모키타자와"},{"n":"Kaldi Coffee Farm","c":"쇼핑","s":"마트·식료품","d":"세타가야구","lat":35.662239,"lng":139.667431,"cid":"4366303086161511502","src":"별표 표시된 장소","h":"시모키타자와"},{"n":"LINC ORIGINAL MAKERS Ikejiri","c":"쇼핑","s":"향수·뷰티","d":"세타가야구","lat":35.644879,"lng":139.679369,"cid":"3772394276357933917","src":"별표 표시된 장소","h":"에비스·나카메구로"},{"n":"Mallorca","c":"식당","s":"양식","d":"세타가야구","lat":35.611187,"lng":139.630562,"cid":"5532516615461174764","src":"가고 싶은 장소","t":"스페인 요리·베이커리","h":"그 밖의 지역"},{"n":"MICMO下北沢1号店","c":"쇼핑","s":"의류·신발·패션","d":"세타가야구","lat":35.662595,"lng":139.666844,"cid":"10094565153181870458","src":"별표 표시된 장소","h":"시모키타자와"},{"n":"tagcafe","c":"카페·디저트","s":"커피","d":"세타가야구","lat":35.660938,"lng":139.667812,"cid":"6437876174024178301","src":"가고 싶은 장소","t":"카페","h":"시모키타자와"},{"n":"시로히게노(흰 수염) 슈크림 공방","c":"카페·디저트","s":"디저트","d":"세타가야구","lat":35.658965,"lng":139.662735,"cid":"9540248764764221208","src":"별표 표시된 장소","t":"슈크림","h":"시모키타자와"},{"n":"코문 도쿄 본점","c":"카페·디저트","s":"베이커리","d":"세타가야구","lat":35.60578,"lng":139.661868,"cid":"12552890950735931586","src":"별표 표시된 장소","t":"빵","h":"그 밖의 지역"},{"n":"Kaiten Sushi Toriton","c":"식당","s":"스시·해산물","d":"스미다구","lat":35.710062,"lng":139.812938,"cid":"5860161407130255729","src":"기본 목록(1) / Tokyo food","t":"스시·해산물","h":"아사쿠사"},{"n":"동구리공화국 도쿄 스카이타워랜드 소라마치점","c":"쇼핑","s":"잡화·생활·굿즈","d":"스미다구","lat":35.710687,"lng":139.812938,"cid":"6763051575329219949","src":"가고 싶은 장소","h":"아사쿠사"},{"n":"이토요카도 히키후네점","c":"쇼핑","s":"마트·식료품","d":"스미다구","lat":35.717451,"lng":139.817783,"cid":"17668924120648370766","src":"별표 표시된 장소","h":"아사쿠사"},{"n":"이온 스타일 시나가와시사이드점","c":"쇼핑","s":"마트·식료품","d":"시나가와구","lat":35.610727,"lng":139.749026,"cid":"18335422082466179121","src":"별표 표시된 장소","h":"그 밖의 지역"},{"n":"회전스시 카츠 미도리 메구로점","c":"식당","s":"스시·해산물","d":"시나가와구","lat":35.632937,"lng":139.715937,"cid":"5784051961446505836","src":"가고 싶은 장소","t":"스시·해산물","h":"에비스·나카메구로"},{"n":"1LDK aoyama","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.663438,"lng":139.708687,"cid":"11150788488487403117","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"9090 東京店","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.668563,"lng":139.706813,"cid":"9550114117137732809","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"AAPE STORE 原宿","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669346,"lng":139.707009,"cid":"10634122863014902952","src":"별표 표시된 장소","h":"하라주쿠·오모테산도"},{"n":"AAPE STORE 渋谷","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.663066,"lng":139.699495,"cid":"12261966340035012610","src":"별표 표시된 장소","h":"시부야"},{"n":"atmos","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.668813,"lng":139.706312,"cid":"2649575571808961316","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"atmos BLUE OMOTESANDO","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.668312,"lng":139.706437,"cid":"17472319842595156548","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"BAGGAGE COFFEE","c":"카페·디저트","s":"커피","d":"시부야구","lat":35.669438,"lng":139.709937,"cid":"2701142097314137643","src":"가고 싶은 장소","t":"커피","h":"하라주쿠·오모테산도"},{"n":"BAPE Store","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.661563,"lng":139.698688,"cid":"17074459437478121546","src":"가고 싶은 장소","h":"시부야"},{"n":"Base Yard Tokyo","c":"쇼핑","s":"잡화·생활·굿즈","d":"시부야구","lat":35.666812,"lng":139.704563,"cid":"2770181034304769562","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"BEAMS JAPAN SHIBUYA","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.657688,"lng":139.700187,"cid":"7491754352411812217","src":"가고 싶은 장소","h":"시부야"},{"n":"BEAMS MEN SHIBUYA","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.663812,"lng":139.699688,"cid":"3206508140497075105","src":"가고 싶은 장소","h":"시부야"},{"n":"BILLY'S ENT Shibuya","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.664687,"lng":139.702188,"cid":"11001827201009074385","src":"가고 싶은 장소","h":"시부야"},{"n":"Carhartt WIP Store Tokyo Shibuya","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669562,"lng":139.707063,"cid":"9960410456684159107","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Champion shibuya","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.663688,"lng":139.702313,"cid":"8952934793759600570","src":"가고 싶은 장소","h":"시부야"},{"n":"DANTON TOKYO","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.666187,"lng":139.704062,"cid":"3286721948833497824","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"duffle with kapital","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.642812,"lng":139.710187,"cid":"4955929520084932929","src":"옷 / 가고 싶은 장소","h":"에비스·나카메구로"},{"n":"DULTON Jinnan Shop","c":"쇼핑","s":"잡화·생활·굿즈","d":"시부야구","lat":35.664728,"lng":139.700568,"cid":"1474521689370943699","src":"별표 표시된 장소","h":"시부야"},{"n":"EVISU Omotesando Tokyo","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.668188,"lng":139.708188,"cid":"15935024217257075668","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"FREAK'S STORE Shibuya","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.662937,"lng":139.700437,"cid":"13016080179487620260","src":"옷","h":"시부야"},{"n":"GR8","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669312,"lng":139.705187,"cid":"14748545559255114070","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"GYUKATSU Kyoto Katsugyu Shibuya Dogenzaka","c":"식당","s":"돈카츠·튀김","d":"시부야구","lat":35.657279,"lng":139.696193,"cid":"11439916912159261095","src":"별표 표시된 장소 / Tokyo food","t":"돈카츠·규카츠","h":"시부야"},{"n":"Henry's Burger Harajuku","c":"식당","s":"양식","d":"시부야구","lat":35.666063,"lng":139.703812,"cid":"2983983750988350627","src":"짧 / Tokyo food","t":"버거","h":"하라주쿠·오모테산도"},{"n":"HUMAN MADE","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.662062,"lng":139.698563,"cid":"109433818671066686","src":"가고 싶은 장소","h":"시부야"},{"n":"Hummingbirds'hill shop","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.671937,"lng":139.709062,"cid":"1374394553814675223","src":"옷","h":"하라주쿠·오모테산도"},{"n":"Kapital","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.643687,"lng":139.709812,"cid":"3504688113222414750","src":"옷 / 가고 싶은 장소","h":"에비스·나카메구로"},{"n":"Kapital Legs","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.642063,"lng":139.709188,"cid":"8243935970920433661","src":"옷 / 가고 싶은 장소","h":"에비스·나카메구로"},{"n":"LUSH Shibuya Station Store","c":"쇼핑","s":"향수·뷰티","d":"시부야구","lat":35.659312,"lng":139.699938,"cid":"10144291704262143367","src":"가고 싶은 장소","h":"시부야"},{"n":"nanamica MOUNTAIN","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.648938,"lng":139.701063,"cid":"8095431365742038592","src":"가고 싶은 장소","h":"에비스·나카메구로"},{"n":"NEIGHBORHOOD","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669312,"lng":139.706687,"cid":"1230507886452544415","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Nepenthes Tokyo","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.664437,"lng":139.707687,"cid":"12179465151610714190","src":"옷 / 가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Nintendo Tokyo","c":"쇼핑","s":"잡화·생활·굿즈","d":"시부야구","lat":35.662062,"lng":139.698688,"cid":"14598527675868167682","src":"가고 싶은 장소","h":"시부야"},{"n":"NUBIAN (ヌビアン) SHIBUYA","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.662188,"lng":139.698438,"cid":"15875494631525840226","src":"옷","h":"시부야"},{"n":"Palace Skateboards Tokyo","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.666562,"lng":139.707812,"cid":"2500602127142194352","src":"즐겨찾는 장소 / 가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Pilgrim Surf+Supply","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.663688,"lng":139.699938,"cid":"16940462017284186094","src":"가고 싶은 장소","h":"시부야"},{"n":"PUEBCO SHIBUYA PARCO","c":"쇼핑","s":"잡화·생활·굿즈","d":"시부야구","lat":35.662031,"lng":139.699048,"cid":"14213094897299045061","src":"별표 표시된 장소","h":"시부야"},{"n":"RAGTAG Shibuya Store","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.663063,"lng":139.699938,"cid":"13454786597136542028","src":"가고 싶은 장소","h":"시부야"},{"n":"retaW store HARAJUKU","c":"쇼핑","s":"향수·뷰티","d":"시부야구","lat":35.668687,"lng":139.706813,"cid":"6742256843314593675","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Shibuya Parco","c":"쇼핑","s":"백화점·쇼핑몰","d":"시부야구","lat":35.662062,"lng":139.698813,"cid":"1935335699422656795","src":"가고 싶은 장소","h":"시부야"},{"n":"SHIPS Shibuya","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.662813,"lng":139.700187,"cid":"16763441241040819506","src":"옷","h":"시부야"},{"n":"SNS Tokyo","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.650937,"lng":139.705437,"cid":"632927387755024286","src":"가고 싶은 장소","h":"에비스·나카메구로"},{"n":"STORE by NIGO®","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669187,"lng":139.705688,"cid":"2616190184069795097","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"STUDIOUS MENS Harajuku Store","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669574,"lng":139.707958,"cid":"1866076482263598366","src":"별표 표시된 장소 / 옷","h":"하라주쿠·오모테산도"},{"n":"Stussy","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.663438,"lng":139.699938,"cid":"14850878530027583275","src":"가고 싶은 장소","h":"시부야"},{"n":"STUSSY Harajuku Chapter","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669688,"lng":139.707437,"cid":"13347403090240066832","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"Supreme Daikanyama","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.653188,"lng":139.705312,"cid":"12312680781617676923","src":"가고 싶은 장소","h":"시부야"},{"n":"Supreme Shibuya","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.662687,"lng":139.699813,"cid":"16473985407260846720","src":"가고 싶은 장소","h":"시부야"},{"n":"Sushi Ginza Onodera Musuko Shibuya","c":"식당","s":"스시·해산물","d":"시부야구","lat":35.658062,"lng":139.700187,"cid":"10408344860047266540","src":"즐겨찾는 장소","t":"스시·해산물","h":"시부야"},{"n":"Tsukemen Gonokami Seisakusho Shinjuku","c":"식당","s":"라멘·면","d":"시부야구","lat":35.687312,"lng":139.703812,"cid":"12530532341390494317","src":"2027 visit / Tokyo food","t":"라멘·면요리","h":"신주쿠"},{"n":"UNION TOKYO","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.673938,"lng":139.710312,"cid":"4783119436571426097","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"visvim","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.667437,"lng":139.706813,"cid":"12969096125585702333","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"WATER THE PLANT","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.664726,"lng":139.702316,"cid":"557857133551301515","src":"별표 표시된 장소","h":"시부야"},{"n":"규카츠 교토가츠규 하라주쿠점","c":"식당","s":"돈카츠·튀김","d":"시부야구","lat":35.669327,"lng":139.706205,"cid":"8317335076355888559","src":"별표 표시된 장소 / Tokyo food","t":"돈카츠·규카츠","h":"하라주쿠·오모테산도"},{"n":"규카츠 모토무라 시부야분점","c":"식당","s":"돈카츠·튀김","d":"시부야구","lat":35.659687,"lng":139.704187,"cid":"5974494739618672671","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"시부야"},{"n":"나나미카 마운틴","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.648688,"lng":139.701063,"cid":"8646554096367128976","src":"가고 싶은 장소","h":"에비스·나카메구로"},{"n":"넘버 슈가","c":"카페·디저트","s":"디저트","d":"시부야구","lat":35.666438,"lng":139.706187,"cid":"5571226775801367661","src":"가고 싶은 장소","t":"캐러멜","h":"하라주쿠·오모테산도"},{"n":"다이칸야마 츠타야 서점","c":"쇼핑","s":"서점","d":"시부야구","lat":35.648938,"lng":139.699813,"cid":"15490653164204088489","src":"가고 싶은 장소","h":"에비스·나카메구로"},{"n":"도큐플라자 오모테산도 하라주쿠","c":"쇼핑","s":"백화점·쇼핑몰","d":"시부야구","lat":35.668687,"lng":139.705938,"cid":"14615084664525387832","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"래그태그 하라주쿠점","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.665813,"lng":139.705187,"cid":"15427969971660052394","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"메가 돈키호테 시부야본점","c":"쇼핑","s":"잡화·생활·굿즈","d":"시부야구","lat":35.660438,"lng":139.697812,"cid":"9124525651654476405","src":"가고 싶은 장소","h":"시부야"},{"n":"모마 디자인 스토어","c":"쇼핑","s":"잡화·생활·굿즈","d":"시부야구","lat":35.667437,"lng":139.706813,"cid":"13277641244909264102","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"베이프 스토어 하라주쿠","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.667938,"lng":139.708562,"cid":"11470044563448368660","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"빅 카메라 시부야히가시구치점 본관","c":"쇼핑","s":"전자제품·카메라","d":"시부야구","lat":35.659937,"lng":139.702063,"cid":"9854703712830428013","src":"가고 싶은 장소","h":"시부야"},{"n":"빔스 보이 하라주쿠","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.671563,"lng":139.707938,"cid":"12974878254494893631","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"수프림 하라주쿠","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.669187,"lng":139.706687,"cid":"4252535233589040029","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"스타벅스 미야시타 공원점","c":"카페·디저트","s":"커피","d":"시부야구","lat":35.662312,"lng":139.701938,"cid":"13234366510367895457","src":"가고 싶은 장소","t":"커피","h":"시부야"},{"n":"아후리 하라주쿠점","c":"식당","s":"라멘·면","d":"시부야구","lat":35.673063,"lng":139.703812,"cid":"14658399961265590294","src":"Tokyo food / 가고 싶은 장소","t":"라멘·면요리","h":"하라주쿠·오모테산도"},{"n":"야키니쿠 라이크 시부야 우다가와초점","c":"식당","s":"고기·야키니쿠","d":"시부야구","lat":35.661313,"lng":139.697937,"cid":"697571285523530676","src":"가고 싶은 장소","t":"고기·야키니쿠","h":"시부야"},{"n":"우동 신","c":"식당","s":"라멘·면","d":"시부야구","lat":35.686489,"lng":139.697001,"cid":"5413784674946717542","src":"별표 표시된 장소","t":"라멘·면요리","h":"신주쿠"},{"n":"우오베이 시부야 도겐자카점","c":"식당","s":"스시·해산물","d":"시부야구","lat":35.659438,"lng":139.697937,"cid":"5886746596086835007","src":"가고 싶은 장소","t":"스시·해산물","h":"시부야"},{"n":"유니클로 시부야 도겐자카점","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.659438,"lng":139.698438,"cid":"8460627897844529167","src":"가고 싶은 장소","h":"시부야"},{"n":"자파디-두","c":"쇼핑","s":"잡화·생활·굿즈","d":"시부야구","lat":35.646761,"lng":139.703323,"cid":"17404732623563381557","src":"별표 표시된 장소","h":"에비스·나카메구로"},{"n":"츠케멘 야스베에 시부야점","c":"식당","s":"라멘·면","d":"시부야구","lat":35.657187,"lng":139.703812,"cid":"825628217371402358","src":"Tokyo food / 가고 싶은 장소","t":"라멘·면요리","h":"시부야"},{"n":"츠케멘 야스베에 신주쿠점","c":"식당","s":"라멘·면","d":"신주쿠구","lat":35.687812,"lng":139.697438,"cid":"4523043612652278532","src":"가고 싶은 장소","t":"라멘·면요리","h":"신주쿠"},{"n":"츠키시마몬자 오코게 시부야","c":"식당","s":"일식 간편식","d":"시부야구","lat":35.660438,"lng":139.699437,"cid":"1978719074806591162","src":"Tokyo food / 가고 싶은 장소","t":"몬자","h":"시부야"},{"n":"카츠미도리 회전초밥 시부야점","c":"식당","s":"스시·해산물","d":"시부야구","lat":35.660187,"lng":139.700562,"cid":"12227803871553836551","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"시부야"},{"n":"카츠키치 시부야점","c":"식당","s":"돈카츠·튀김","d":"시부야구","lat":35.657187,"lng":139.704688,"cid":"7799104657208609154","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"시부야"},{"n":"커리 업","c":"식당","s":"일식 간편식","d":"시부야구","lat":35.674563,"lng":139.707562,"cid":"4665242854444455376","src":"Tokyo food / 가고 싶은 장소","t":"카레","h":"하라주쿠·오모테산도"},{"n":"코시탄탄","c":"식당","s":"기타","d":"시부야구","lat":35.662687,"lng":139.697062,"cid":"17004498800479480752","src":"Tokyo food / 가고 싶은 장소","t":"음식점","h":"시부야"},{"n":"크롬 하츠","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.672312,"lng":139.709313,"cid":"9778377381539910962","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"키스 도쿄","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.662937,"lng":139.701938,"cid":"18270458273014498001","src":"옷 / 가고 싶은 장소","h":"시부야"},{"n":"하이 스탠다드","c":"쇼핑","s":"의류·신발·패션","d":"시부야구","lat":35.648939,"lng":139.701218,"cid":"3028586709569966382","src":"별표 표시된 장소 / 가고 싶은 장소","h":"에비스·나카메구로"},{"n":"휴먼메이드 & 블루보틀","c":"쇼핑","s":"의류·카페 복합","d":"시부야구","lat":35.672688,"lng":139.712312,"cid":"11700221341135087596","src":"가고 싶은 장소","h":"하라주쿠·오모테산도"},{"n":"FREAK ' S STORE Rumineesutoshinjukuwimenzuten","c":"쇼핑","s":"의류·신발·패션","d":"신주쿠구","lat":35.691563,"lng":139.701063,"cid":"14641841387845551052","src":"옷","h":"신주쿠"},{"n":"Horumonchiba Shinjukuten","c":"식당","s":"고기·야키니쿠","d":"신주쿠구","lat":35.691437,"lng":139.706437,"cid":"18332086224320677463","src":"2027 visit","t":"고기·야키니쿠","h":"신주쿠"},{"n":"RAGTAG Shinjuku","c":"쇼핑","s":"의류·신발·패션","d":"신주쿠구","lat":35.690188,"lng":139.704187,"cid":"10311319387774571531","src":"가고 싶은 장소","h":"신주쿠"},{"n":"Stüssy LUMINE EST Shinjuku Chapter","c":"쇼핑","s":"의류·신발·패션","d":"신주쿠구","lat":35.691063,"lng":139.701063,"cid":"8542741962183815812","src":"가고 싶은 장소","h":"신주쿠"},{"n":"로바타 쇼","c":"술집","s":"이자카야","d":"신주쿠구","lat":35.693009,"lng":139.697806,"cid":"10076275480896585605","src":"별표 표시된 장소","t":"로바타야키","h":"신주쿠"},{"n":"빅카메라 신주쿠 히가시구치점","c":"쇼핑","s":"전자제품·카메라","d":"신주쿠구","lat":35.691313,"lng":139.703062,"cid":"3013765906355954099","src":"가고 싶은 장소","h":"신주쿠"},{"n":"빔스 신주쿠","c":"쇼핑","s":"의류·신발·패션","d":"신주쿠구","lat":35.691812,"lng":139.700938,"cid":"4571059030974543044","src":"가고 싶은 장소","h":"신주쿠"},{"n":"빔스 재팬","c":"쇼핑","s":"의류·신발·패션","d":"신주쿠구","lat":35.690438,"lng":139.703937,"cid":"16899391789199176645","src":"가고 싶은 장소","h":"신주쿠"},{"n":"우나테츠","c":"식당","s":"장어","d":"신주쿠구","lat":35.694688,"lng":139.702687,"cid":"5633907992513733562","src":"Tokyo food / 가고 싶은 장소","t":"장어","h":"신주쿠"},{"n":"이세탄 신주쿠점","c":"쇼핑","s":"백화점·쇼핑몰","d":"신주쿠구","lat":35.691563,"lng":139.704688,"cid":"10048688310454447541","src":"가고 싶은 장소","h":"신주쿠"},{"n":"카츠레츠 요츠야 타케다","c":"식당","s":"돈카츠·튀김","d":"신주쿠구","lat":35.686437,"lng":139.729312,"cid":"2751520531035388537","src":"짧 / Tokyo food","t":"돈카츠·규카츠","h":"그 밖의 지역"},{"n":"타츠키치 신주쿠본점","c":"식당","s":"돈카츠·튀김","d":"신주쿠구","lat":35.691246,"lng":139.705256,"cid":"3212438369977374144","src":"별표 표시된 장소","t":"쿠시아게","h":"신주쿠"},{"n":"톤친칸","c":"식당","s":"돈카츠·튀김","d":"신주쿠구","lat":35.689563,"lng":139.696812,"cid":"3498904465486226463","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"신주쿠"},{"n":"BEAMS GINZA","c":"쇼핑","s":"의류·신발·패션","d":"주오구","lat":35.672187,"lng":139.764938,"cid":"8319807901044728394","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"Chrome Hearts Ginza Store","c":"쇼핑","s":"의류·신발·패션","d":"주오구","lat":35.671312,"lng":139.762937,"cid":"5054441042591433914","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"Ginza Capital Hotel Moegi","c":"숙소","s":"호텔","d":"주오구","lat":35.669187,"lng":139.774313,"cid":"11662023554793596090","src":"가고 싶은 장소","h":"츠키지"},{"n":"Ginza Loft","c":"쇼핑","s":"잡화·생활·굿즈","d":"주오구","lat":35.674062,"lng":139.766312,"cid":"3620508382511668300","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"Imakatsu Ginza","c":"식당","s":"돈카츠·튀김","d":"주오구","lat":35.669562,"lng":139.768687,"cid":"6631171128921633605","src":"2027 visit","t":"돈카츠·규카츠","h":"츠키지"},{"n":"Kapital","c":"쇼핑","s":"의류·신발·패션","d":"주오구","lat":35.672312,"lng":139.770563,"cid":"6066449706307322182","src":"옷 / 가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"Katsuhei","c":"식당","s":"돈카츠·튀김","d":"주오구","lat":35.665062,"lng":139.773937,"cid":"1136110032240644835","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"츠키지"},{"n":"KOKO HOTEL 츠키지 긴자","c":"숙소","s":"호텔","d":"주오구","lat":35.664812,"lng":139.773188,"cid":"1864296404087438123","src":"가고 싶은 장소","h":"츠키지"},{"n":"Le Pain","c":"카페·디저트","s":"베이커리","d":"주오구","lat":35.664313,"lng":139.770438,"cid":"885968148961921945","src":"Tokyo food / 가고 싶은 장소","t":"빵","h":"츠키지"},{"n":"Maruta Shokuhin","c":"쇼핑","s":"마트·식료품","d":"주오구","lat":35.664812,"lng":139.770438,"cid":"7636020243605930665","src":"가고 싶은 장소","h":"츠키지"},{"n":"Mizuno","c":"쇼핑","s":"의류·신발·패션","d":"주오구","lat":35.680669,"lng":139.773812,"cid":"17882233889642791163","src":"Someday / 가고 싶은 장소","h":"니혼바시·도쿄역"},{"n":"Omakase","c":"식당","s":"스시·해산물","d":"주오구","lat":35.664563,"lng":139.771437,"cid":"2858880933349534012","src":"가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"Otsukisama","c":"카페·디저트","s":"기타","d":"주오구","lat":35.672688,"lng":139.779188,"cid":"5166379540414844780","src":"Tokyo food / 가고 싶은 장소","t":"카페·디저트","h":"츠키지"},{"n":"Seiju","c":"식당","s":"돈카츠·튀김","d":"주오구","lat":35.666312,"lng":139.771187,"cid":"6395886471763706013","src":"Tokyo food / 가고 싶은 장소","t":"덴푸라","h":"츠키지"},{"n":"Shimizu","c":"카페·디저트","s":"기타","d":"주오구","lat":35.664437,"lng":139.772188,"cid":"14016438838296500298","src":"가고 싶은 장소","t":"카페·디저트","h":"츠키지"},{"n":"Sugitora Tofu","c":"쇼핑","s":"마트·식료품","d":"주오구","lat":35.665438,"lng":139.775187,"cid":"1705892451973574971","src":"가고 싶은 장소","h":"츠키지"},{"n":"Suikodo","c":"카페·디저트","s":"기타","d":"주오구","lat":35.674937,"lng":139.781937,"cid":"11707232419283330364","src":"가고 싶은 장소","t":"카페·디저트","h":"니혼바시·도쿄역"},{"n":"Sukiya Camera","c":"쇼핑","s":"전자제품·카메라","d":"주오구","lat":35.672063,"lng":139.764563,"cid":"7777834496834246998","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"Sushi Keita","c":"식당","s":"스시·해산물","d":"주오구","lat":35.665438,"lng":139.773687,"cid":"1401400842964214114","src":"가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"Yakiniku Chanpion Nihonbashi Takashimaya S.C.Store","c":"식당","s":"고기·야키니쿠","d":"주오구","lat":35.681233,"lng":139.774018,"cid":"6844598283570695904","src":"별표 표시된 장소","t":"고기·야키니쿠","h":"니혼바시·도쿄역"},{"n":"긴자 바이린 본점","c":"식당","s":"돈카츠·튀김","d":"주오구","lat":35.669562,"lng":139.762687,"cid":"8684877893208776297","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"긴자·유라쿠초"},{"n":"긴자 오보로즈키","c":"식당","s":"라멘·면","d":"주오구","lat":35.671188,"lng":139.761313,"cid":"5637194760360720505","src":"가고 싶은 장소","t":"라멘·면요리","h":"긴자·유라쿠초"},{"n":"긴자 카츠카미","c":"식당","s":"돈카츠·튀김","d":"주오구","lat":35.670687,"lng":139.763688,"cid":"17663241651111966538","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"긴자·유라쿠초"},{"n":"긴자기무라야 긴자본점","c":"카페·디저트","s":"베이커리","d":"주오구","lat":35.671687,"lng":139.765312,"cid":"1261986758159638453","src":"가고 싶은 장소","t":"단팥빵","h":"긴자·유라쿠초"},{"n":"네무로하나마루 긴자점","c":"식당","s":"스시·해산물","d":"주오구","lat":35.672187,"lng":139.762438,"cid":"17844340033497949031","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"긴자·유라쿠초"},{"n":"도미인 도쿄 핫쵸보리점","c":"숙소","s":"호텔","d":"주오구","lat":35.674438,"lng":139.780687,"cid":"4779777939923738795","src":"가고 싶은 장소","h":"니혼바시·도쿄역"},{"n":"도버 스트리트 마켓 긴자","c":"쇼핑","s":"의류·신발·패션","d":"주오구","lat":35.670437,"lng":139.763187,"cid":"1517999343228708133","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"돈키호테 긴자본관","c":"쇼핑","s":"잡화·생활·굿즈","d":"주오구","lat":35.667122,"lng":139.761894,"cid":"6877499818092145610","src":"별표 표시된 장소","h":"긴자·유라쿠초"},{"n":"마루우시 미트 긴자본점","c":"식당","s":"고기·야키니쿠","d":"주오구","lat":35.674563,"lng":139.767063,"cid":"1218376153003599400","src":"Tokyo food / 가고 싶은 장소","t":"고기·야키니쿠","h":"긴자·유라쿠초"},{"n":"마루토요 오니기리 츠키지","c":"식당","s":"일식 간편식","d":"주오구","lat":35.665312,"lng":139.769813,"cid":"14094582827016577213","src":"가고 싶은 장소","t":"오니기리","h":"츠키지"},{"n":"모또다네","c":"식당","s":"스시·해산물","d":"주오구","lat":35.664687,"lng":139.771938,"cid":"16572420489210501022","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"삿포로생맥주 블랙라벨 더 바","c":"술집","s":"바","d":"주오구","lat":35.670896,"lng":139.764998,"cid":"3330680285189070844","src":"별표 표시된 장소 / Tokyo food","t":"맥주 바","h":"긴자·유라쿠초"},{"n":"스시노미도리 긴자점","c":"식당","s":"스시·해산물","d":"주오구","lat":35.670437,"lng":139.759688,"cid":"8679293327778196578","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"긴자·유라쿠초"},{"n":"스시잔마이 본점","c":"식당","s":"스시·해산물","d":"주오구","lat":35.665937,"lng":139.770688,"cid":"16402451146916583184","src":"가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"스시쿠니","c":"식당","s":"스시·해산물","d":"주오구","lat":35.664812,"lng":139.770688,"cid":"8026928846518979703","src":"가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"아부라소바 긴자구미","c":"식당","s":"라멘·면","d":"주오구","lat":35.669312,"lng":139.764813,"cid":"9594549697280962977","src":"Tokyo food / 가고 싶은 장소","t":"라멘·면요리","h":"긴자·유라쿠초"},{"n":"야키우오 이시카와 츠키지","c":"식당","s":"스시·해산물","d":"주오구","lat":35.665213,"lng":139.770849,"cid":"3536833401292688978","src":"별표 표시된 장소","t":"생선구이","h":"츠키지"},{"n":"우니토라 나카도오리점","c":"식당","s":"스시·해산물","d":"주오구","lat":35.665563,"lng":139.770438,"cid":"7867844631688192504","src":"가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"웨스트 긴자본점","c":"카페·디저트","s":"디저트","d":"주오구","lat":35.670437,"lng":139.760812,"cid":"2872184234098789818","src":"가고 싶은 장소","t":"양과자","h":"긴자·유라쿠초"},{"n":"유니클로 긴자점","c":"쇼핑","s":"의류·신발·패션","d":"주오구","lat":35.670187,"lng":139.763438,"cid":"5036491705805576403","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"이즈미노","c":"식당","s":"기타","d":"주오구","lat":35.680563,"lng":139.771562,"cid":"4724553800589106577","src":"Tokyo food / 가고 싶은 장소","t":"음식점","h":"니혼바시·도쿄역"},{"n":"츠지한 니혼바시 본점","c":"식당","s":"스시·해산물","d":"주오구","lat":35.680717,"lng":139.771577,"cid":"2386807723085252126","src":"별표 표시된 장소 / Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"니혼바시·도쿄역"},{"n":"츠키지 스시 조 본점","c":"식당","s":"스시·해산물","d":"주오구","lat":35.667812,"lng":139.772562,"cid":"3055242160569654536","src":"가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"츠키지 스시다이 본관","c":"식당","s":"스시·해산물","d":"주오구","lat":35.664563,"lng":139.772312,"cid":"12703375602748450933","src":"가고 싶은 장소","t":"스시·해산물","h":"츠키지"},{"n":"카네마스","c":"술집","s":"이자카야","d":"주오구","lat":35.660063,"lng":139.776813,"cid":"3284785136336238667","src":"Tokyo food / 가고 싶은 장소","t":"이자카야","h":"츠키지"},{"n":"쿠시야키 비스트로 후쿠미미 긴자점","c":"술집","s":"이자카야","d":"주오구","lat":35.669562,"lng":139.765187,"cid":"3342363753007324535","src":"Tokyo food / 가고 싶은 장소","t":"꼬치구이","h":"긴자·유라쿠초"},{"n":"키미지마야 주판점","c":"쇼핑","s":"주류 판매점","d":"주오구","lat":35.675812,"lng":139.766312,"cid":"366029616014757244","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"타카하시야","c":"식당","s":"장어","d":"주오구","lat":35.670187,"lng":139.767937,"cid":"13534162135024811362","src":"Tokyo food / 가고 싶은 장소","t":"장어","h":"긴자·유라쿠초"},{"n":"팡 메종 긴자점","c":"카페·디저트","s":"베이커리","d":"주오구","lat":35.671563,"lng":139.770563,"cid":"17159700221412295500","src":"Tokyo food","t":"빵","h":"긴자·유라쿠초"},{"n":"호르몬 니코미 키츠네야","c":"식당","s":"고기·야키니쿠","d":"주오구","lat":35.665813,"lng":139.769937,"cid":"10762732184996540674","src":"Tokyo food / 가고 싶은 장소","t":"호르몬 조림","h":"츠키지"},{"n":"효탄야6초메","c":"식당","s":"장어","d":"주오구","lat":35.669247,"lng":139.764632,"cid":"5755529810015062436","src":"별표 표시된 장소 / Tokyo food","t":"장어","h":"긴자·유라쿠초"},{"n":"BEAUTY & YOUTH by UNITED ARROWS Marunouchi Store","c":"쇼핑","s":"의류·신발·패션","d":"지요다구","lat":35.681188,"lng":139.763563,"cid":"5713130524846235210","src":"가고 싶은 장소","h":"니혼바시·도쿄역"},{"n":"Shinjidai","c":"술집","s":"이자카야","d":"지요다구","lat":35.697313,"lng":139.772562,"cid":"4034373344350345143","src":"Tokyo food / 가고 싶은 장소","t":"꼬치구이","h":"아키하바라"},{"n":"Yakiniku LIKE Akihabara Denki-gai","c":"식당","s":"고기·야키니쿠","d":"지요다구","lat":35.698563,"lng":139.770813,"cid":"6543960722147838274","src":"Tokyo food / 가고 싶은 장소","t":"고기·야키니쿠","h":"아키하바라"},{"n":"도쿄 밀크치즈 공장 Cow Cow Kitchen 아토레아키하바라1점","c":"카페·디저트","s":"디저트","d":"지요다구","lat":35.698437,"lng":139.772437,"cid":"2825762119226096921","src":"가고 싶은 장소","t":"과자","h":"아키하바라"},{"n":"마루고 톤카츠","c":"식당","s":"돈카츠·튀김","d":"지요다구","lat":35.699188,"lng":139.769688,"cid":"13220027022347389990","src":"Tokyo food / 가고 싶은 장소","t":"돈카츠·규카츠","h":"아키하바라"},{"n":"빅카메라 유라쿠초점","c":"쇼핑","s":"전자제품·카메라","d":"지요다구","lat":35.675438,"lng":139.762937,"cid":"9787715230558271059","src":"가고 싶은 장소","h":"긴자·유라쿠초"},{"n":"스시로 아키하바라역앞점","c":"식당","s":"스시·해산물","d":"지요다구","lat":35.698687,"lng":139.771938,"cid":"5886741088695829682","src":"Tokyo food / 가고 싶은 장소","t":"스시·해산물","h":"아키하바라"},{"n":"아오시마 쇼쿠도","c":"식당","s":"라멘·면","d":"지요다구","lat":35.697437,"lng":139.778812,"cid":"6262217562493916098","src":"Tokyo food","t":"라멘·면요리","h":"아키하바라"},{"n":"킹그램리커 칸다점","c":"쇼핑","s":"주류 판매점","d":"지요다구","lat":35.692687,"lng":139.769187,"cid":"5021429654647463368","src":"2027 visit","h":"아키하바라"},{"n":"한큐 맨즈 도쿄","c":"쇼핑","s":"백화점·쇼핑몰","d":"지요다구","lat":35.673563,"lng":139.762438,"cid":"8784626964779656404","src":"가고 싶은 장소","h":"긴자·유라쿠초"}];
+const BASE = {"land":"M-235 -1200l-148 0l-1 0l-863 0l-104 0l-30 0l0 40l23 -27l-9 18l-13 16l0 1l-1 0l0 219l0 1l0 40l121 -44l2 0l-58 28l-42 13l-1 0l-21 11l-1 0l0 238l0 32l0 16l0 271l0 33l0 195l0 178l0 1l0 300l7 1l31 19l-38 -15l0 865l1370 0l-32 -14l25 3l23 11l780 0l-36 -67l-55 -89l-23 0l-22 6l-72 10l0 1l-59 84l-5 -2l-16 -24l-20 -13l-1 0l-23 16l-1 0l-3 12l-16 -12l-3 2l-2 -4l2 -4l1 0l-1 0l-12 -18l-38 -38l-11 4l7 -6l0 -1l-15 -16l-1 0l-3 -1l-10 5l8 -6l1 -1l-32 -30l1 -2l6 6l1 0l9 -10l0 -1l-33 5l33 -6l0 -1l6 -6l-2 -9l7 -6l14 19l7 3l1 0l31 -11l1 -1l-2 -4l36 -17l13 12l1 0l53 0l1 0l14 -10l28 -31l11 13l-9 11l-8 -1l-1 0l-4 4l3 14l0 1l135 0l17 -7l0 -1l-1 -2l11 -14l5 -1l1 0l0 -1l0 -3l0 -1l-35 -34l2 -2l0 -1l1 0l-1 0l-3 -3l0 -1l-1 0l0 1l-3 3l-12 -11l6 -7l0 -1l-1 0l-1 -1l-1 0l-6 6l-16 -14l-1 0l-10 13l-7 -7l-1 0l0 1l-43 43l-2 1l-14 -13l6 -10l25 -28l19 0l0 -1l-5 -5l-10 -1l29 -29l0 -1l-32 -52l2 -4l-11 -20l-1 0l-4 0l-67 -109l4 -2l0 -1l-1 -5l3 0l0 -1l-14 -51l-4 0l-4 -4l-1 0l-3 2l-5 -6l3 -3l-4 -36l-3 -86l-2 -56l0 -1l-32 1l-21 -9l17 -43l6 -2l32 22l1 0l7 0l1 0l0 -1l-1 -81l0 -1l-11 0l0 -3l16 -64l10 -1l21 4l22 5l54 68l40 46l-4 24l10 16l-1 2l-1 0l1 0l0 1l41 57l1 0l2 -2l16 25l1 0l38 -25l3 4l-3 2l-1 0l0 1l1 0l4 -1l49 74l1 0l30 -44l-13 -39l3 -1l-1 -5l-1 0l-3 0l-1 -3l10 -17l-1 -36l45 -5l0 -1l-4 -36l116 -15l1 0l7 -9l103 -11l-7 93l-100 12l-1 0l0 1l2 19l1 0l1 -4l18 -3l134 -13l1 0l0 -1l13 -206l6 -7l1 -19l21 1l40 2l-7 137l0 1l5 3l15 2l16 13l12 6l-1 3l0 1l4 2l0 1l1 0l0 -1l-3 -3l1 -2l17 9l23 5l0 2l-6 0l-1 0l0 1l1 0l7 2l0 -1l1 -3l18 4l27 -3l22 -5l13 3l1 0l0 -1l8 -16l15 7l1 0l68 -44l-1 2l-53 35l-22 20l16 12l-20 43l2 75l128 36l36 -36l40 88l75 -64l-77 -63l28 -17l6 12l30 -30l14 16l-18 28l41 41l163 -113l0 -119l-95 -79l23 -52l72 -45l0 -42l-5 -5l5 -5l0 -1296l-325 0l-382 0l-1 0l-51 0l-1 0l-127 0l7 35l-3 -3l-11 -18l-1 -12l0 -1l-500 -1l-517 0l-83 0l-1 0l-106 0l-1 0zM-153 1187l-8 -7l10 8l-2 -1zM-176 1166l-1 -3l2 5l-1 -2zM-261 937l6 7l7 14l10 40l-23 -61zM-276 918l1 1l-1 -1zM-321 905l27 -3l9 8l-36 -5zM-337 903l1 0l-1 0zM-122 735l0 1l0 -1zM158 378l-2 3l-1 0l0 1l1 0l-1 0l3 -4zM724 192l0 -17l3 43l-3 -26zM720 127l2 8l0 1l-2 -9zM711 39l1 -1l-1 1zM746 -26l-1 1l1 -1zM569 -250l0 -3l0 3zM492 -520l2 -2l1 0l-3 2zM535 -617l4 1l-4 -1zM452 -754l44 9l-25 -4l-19 -5zM397 -798l37 -24l-37 26l0 -2zM308 -1005l0 -1l66 -34l-2 7l-26 16l-37 14l0 1l0 1l-1 -4zM378 -1051l0 2l0 -2zM431 -1065l0 1l-13 2l-2 -3l-10 5l-9 0l-16 -9l50 4zM453 -1095l3 9l-7 10l0 4l-2 3l-9 -1l15 -25zM491 -1178l2 4l-6 30l-25 30l29 -64zM479 -1195l6 6l4 8l-10 -14zM-1320 138l0 -1l0 1zM-1092 149l-4 -16l6 18l-2 -2zM-1082 161l-1 -1l5 2l-4 -1zM-1033 158l-10 2l10 -2zM-984 89l0 3l-1 -5l1 2zM-990 79l-3 -1l3 1zM-997 66l-6 -1l2 0l4 1zM-749 37l-2 2l1 -2l1 0zM-310 77l0 -2l1 -5l-1 7zM-129 -121l-1 1l0 -3l1 2zM-47 -310l-2 0l2 0zM-178 -507l-1 0l1 0l-1 0l1 0zM158 -650l-12 -2l12 2zM24 -1035l0 3l0 -4l0 1zM-1356 -647l2 -1l-1 1l-1 0zM-1241 -735l-2 -11l2 1l5 8l-5 2zM-1230 -739l11 -6l1 1l-12 5zM-1189 -756l-3 -1l17 -18l-1 17l-13 2zM-1172 -778l0 -1l0 1zM-1161 -790l5 -6l-4 6l-1 0zM-1123 -798l0 2l-15 3l-17 -3l0 -1l32 0l0 -1zM-1115 -816l0 1l0 -1zM-208 -531l2 1l-2 -1zM-193 -1190l55 -7l-18 6l-30 2l-7 -1zM-1328 -957l-2 -2l5 -2l5 -7l6 -3l-14 15l0 -1zM-1289 -1096l-4 0l0 -3l14 8l0 3l-9 -5l-1 -3zM-1294 -1099l-25 -9l-2 -7l27 16zM-1248 -1196l-1 1l-1 1l2 -2zM-1243 -895l1 -3l0 5l-1 -2zM-1262 -749l-2 -6l4 -13l1 -2l-3 21zM-1075 -831l-7 2l0 1l-1 0l0 8l-9 1l-4 -1l-1 -4l26 -10l1 5l-5 -2zM-1061 -837l-1 0l11 -4l3 7l-10 3l-3 -6zM-1037 -859l-12 4l12 -6l0 2zM-1019 -863l-12 -1l11 -6l1 7zM-991 -895l-4 2l5 -14l-1 12zM-989 -909l19 -6l0 4l-19 2zM-958 -918l1 5l-9 1l-2 -3l10 -3zM-945 -929l-5 2l5 -7l0 5zM-903 -986l-1 0l-17 33l-11 2l28 -35l40 12l-2 2l-37 -14zM-837 -983l-19 -4l18 3l1 1zM-836 -966l10 4l-11 -3l1 -5l0 4zM-781 -942l-50 29l6 -8l29 -19l6 -3l9 1zM-825 -901l0 -1l-8 -8l1 0l14 14l-9 4l-3 -7l5 -2zM-789 -910l1 -1l18 6l-7 5l-12 -10zM-757 -901l18 6l2 -2l-4 8l-13 -5l-3 -7zM-715 -898l-2 3l-3 -2l3 -4l2 3zM-669 -877l0 -1l-6 -8l3 -17l0 -1l-1 0l1 -1l4 38l-1 -10zM-617 -913l-9 44l-9 0l25 -63l0 -7l2 2l3 7l-12 17zM-609 -996l-1 -1l1 1zM-162 -591l-3 -5l4 5l-1 0zM-507 -1116l0 1l2 3l-14 7l-5 -1l35 -37l-4 14l-14 13zM-552 -1075l0 1l-3 10l-11 10l-4 -2l18 -19zM-427 -1176l12 -4l-9 5l-3 -1zM-1361 -221l0 4l-1 -4l1 0zM-614 -493l1 -1l8 20l-9 -19zM-581 -419l-1 -2l1 2zM-559 -403l-4 -1l3 0l1 1zM-127 -104l1 -2l-1 2zM-127 -116l-1 -1l1 -1l0 2zM-1263 426l11 0l2 5l1 0l0 1l12 2l4 7l-86 -33l22 5l34 13zM-1201 460l43 1l37 14l-80 -15zM-1060 316l1 4l-1 1l0 -5zM-1056 308l5 0l-7 1l2 -1zM-943 314l-1 1l-4 0l5 -1zM-814 616l28 18l-51 -18l23 0zM-711 646l-37 -6l7 -4l7 0l20 6l3 4zM-677 665l10 -3l6 1l3 2l-19 0zM-620 689l7 9l-37 -28l30 19zM-581 720l0 1l1 0l0 -1l0 -2l6 3l20 11l2 2l-3 6l1 2l-2 -1l-42 -32l7 2l10 9zM-512 770l15 19l-27 -22l12 3zM-417 850l6 11l-53 -45l47 34zM-264 734l-2 -1l3 1l-1 0zM-131 274l2 3l0 1l-2 -4zM-203 161l0 -1l7 1l-7 0zM-209 154l-4 -9l5 10l-1 -1zM-1116 480l-5 -5l5 3l0 2zM-1089 509l-12 -12l13 8l-1 4zM-1060 543l-26 -14l13 3l13 11zM-985 582l8 -2l43 10l37 23l-12 -7l-76 -24zM79 -1120l-20 -6l-16 -8l-63 -51l97 64l5 1l-3 0zM193 -1076l-5 -8l-7 -22l22 32l-4 1l-6 -3zM206 -1074l19 -6l-9 5l-10 1zM287 -1096l-1 -1l1 0l0 1zM256 -14l-2 1l2 -1zM379 -231l6 0l-7 0l1 0zM161 -339l1 0l-12 -4l11 4zM429 -550l-1 0l1 0zM399 -575l5 10l-1 -1l-4 -9zM400 93l-3 2l3 -2zM472 112l3 4l-3 -3l0 -1zM505 134l-2 -3l1 1l1 2zM510 147l0 -1l0 1zM482 207l1 1l-1 -1zM302 1057l-2 0l-13 -6l15 6zM279 1048l-32 1l31 -1l1 0zM673 -741l-24 1l21 -1l3 0zM982 -628l-4 -7l-5 -11l9 18zM1014 -565l0 -1l9 12l-9 -11zM1484 -816l41 82l9 12l-45 -64l-5 -30zM1461 -897l5 -10l3 58l-11 -26l3 -22zM1550 -968l-80 53l7 -13l73 -40zM1570 -982l-4 3l4 -4l0 1zM1532 -1164l42 136l-42 -136zM1011 -1150l-14 -5l-8 -9l43 27l-8 3l-8 -6l-5 -10zM1037 -1138l53 -37l1 0l-13 18l-15 10l-26 9zM1248 -1116l-41 -37l-11 -6l-4 -6l-15 -20l1 0l14 20l78 55l-4 1l-18 -7zM1281 -1122l-10 12l17 -32l-7 20zM1331 -1149l-3 0l8 -3l-5 3zM1435 -1132l-2 -12l8 6l-8 9l2 -3zM1408 -1104l14 -11l-25 29l11 -18zM1395 -1082l0 33l-4 -17l3 -14l1 -2zM1428 -1016l-10 -2l-9 -12l-4 -6l23 20zM1248 -854l10 3l4 3l-14 -6zM1286 -894l-2 -7l1 1l1 6zM1222 -990l-11 -15l-1 -3l12 18zM1100 -230l0 -1l20 11l-18 -9l-3 0l1 -1zM1133 -304l0 1l0 1l0 -2zM1123 -313l4 1l1 1l-5 -2zM522 -506l-5 -4l2 2l3 2zM891 -480l-33 -6l33 5l0 1zM888 -450l-2 20l-1 5l3 -25zM753 -201l-2 3l-12 19l14 -22zM1519 261l0 1l0 -1zM1510 56l0 24l-2 -8l2 -16zM1515 15l12 -15l7 -3l-21 29l2 -11zM1560 -16l32 -7l39 -5l-88 20l17 -8zM1776 -179l0 1l-1 2l1 -3zM1760 -254l6 27l-3 -8l-3 -19zM1673 -372l52 59l-34 -26l-18 -33zM1614 -435l-5 -8l-5 -20l32 48l-22 -20zM1625 -556l-23 84l1 -21l5 -26l17 -39l0 2zM1623 -638l0 1l0 -1zM1544 -707l36 32l-13 -6l-23 -26zM532 468l1 0l7 3l1 0l6 -3l2 -7l0 -1l-12 -4l-5 12zM556 501l1 0l11 -18l3 -1l1 0l0 -1l-2 -5l-1 0l-16 22l0 1l3 2zM626 439l-1 0l-10 3l-21 14l-14 0l-1 0l-4 13l0 1l15 5l1 0l5 -15l12 -8l6 4l15 28l-21 17l-23 15l-5 1l-22 18l-9 6l0 38l26 36l1 0l3 -2l1 0l0 -1l-1 0l-3 0l8 -5l-1 3l1 0l14 -12l6 9l-11 9l0 1l1 0l1 -1l31 46l2 0l-1 1l0 1l67 101l1 0l2 -1l10 15l0 1l0 -1l1 0l26 -44l-1 -2l5 -3l15 -25l0 -1l-94 -143l29 -19l2 -6l-21 -31l-43 -66zM610 545l-2 1l2 -1zM596 508l1 0l1 -1l0 -1l-3 -1l1 3zM539 527l1 0l13 -22l-1 0l-2 -2l-13 21l2 3zM358 1085l0 -1l0 -4l0 -1l-1 0l0 1l-1 3l2 1l0 1zM369 1089l38 38l1 0l48 -13l2 -4l-19 -53l0 -1l-13 -11l-16 5l-1 -4l-33 11l0 1l-5 5l-2 26zM475 1116l58 36l0 -1l62 -90l3 -9l0 -1l-1 0l-73 -2l-6 6l-50 0l-3 27l0 1l9 33l1 0zM977 409l6 51l1 0l36 -4l0 -1l-3 -29l62 -7l0 -1l1 -21l0 -1l-65 8l10 -30l0 -1l-1 0l-26 4l0 6l-21 26zM1278 452l1 1l0 -1l6 -3l10 -15l-4 -12l-24 -7l-6 -7l-1 0l-22 -11l-14 2l0 1l-1 0l-5 6l-3 36l1 0l3 -27l11 -1l24 3l27 12l8 11l-11 12zM1322 448l6 2l4 -2l0 -1l-6 -2l3 -6l6 -5l5 1l21 16l-1 8l-11 16l0 1l1 0l4 -2l0 -1l9 -16l-2 -10l-5 -6l-15 -9l-17 -4l-20 4l0 1l-18 26l0 1l1 0l0 -1l19 -25l16 3l0 11zM979 499l1 0l10 -1l0 -1l-1 0l-9 0l-1 0l0 2zM1035 602l16 -1l18 -12l10 14l-18 12l-1 0l0 1l41 60l25 -17l13 -179l-1 0l-7 1l-1 0l0 1l1 6l-3 0l0 3l-3 0l0 -2l0 -1l-1 0l-10 1l-1 -5l0 -1l-6 0l-84 10l-1 0l0 1l13 107l0 1zM767 662l4 1l17 -34l3 1l5 -7l-11 -13l2 -1l0 -1l-10 -11l-47 -73l0 -1l-37 26l-1 0l75 112l0 1zM731 844l0 1l1 0l11 16l0 1l1 0l224 -149l0 -1l-69 -44l-1 0l-98 64l-28 53l-5 4l-3 -2l-1 0l-24 41l2 2l-9 14l-1 0zM816 818l25 -14l1 0l-1 0l-1 -2l5 -3l0 -1l-1 -2l-1 0l-29 19l0 1l1 2l1 0zM858 805l0 1l-3 -1l-1 0l18 23l-14 9l-14 -22l-1 0l-84 56l0 1l4 3l-5 3l0 1l5 6l1 0l6 -5l90 65l1 0l61 -41l50 75l1 0l67 -44l34 -25l1 0l0 -1l-97 -183l-1 0l-119 79zM1070 910l-97 66l-22 -34l100 -67l19 35z","wards":[{"n":"아다치구","d":"M973 -1198l0 12l12 18l12 13l14 6l5 10l8 5l39 -12l15 -11l31 -43l51 0l9 5l23 30l-17 18l-4 20l8 46l10 29l21 47l71 97l9 29l-4 17l-16 18l-12 -7l-22 -6l-4 -13l-3 -29l-47 5l-16 10l-13 19l-34 5l-2 28l-13 2l-4 -4l-30 -3l-7 14l1 35l-9 11l-19 3l-14 -6l-3 -13l6 -24l6 -4l-21 3l-7 59l-7 3l-19 -4l-4 -44l-21 2l0 -5l-31 11l0 50l12 11l-3 12l28 43l20 46l-26 13l-22 33l-6 -15l-18 -8l-20 2l-57 23l-59 -12l-19 -10l-20 -21l-12 -29l1 -12l18 -15l3 -12l-3 -11l-17 -17l-33 -14l-18 -2l-88 5l-59 -4l-112 -23l-16 -13l-3 -10l2 -8l84 -58l10 -18l-1 -12l-6 -11l-10 -9l-30 20l-34 9l-30 3l-79 -32l-6 -9l0 -23l18 -49l-1 -19l37 -15l26 -16l6 -16l2 -20l17 9l9 1l10 -5l2 3l13 -3l6 -5l10 0l3 -3l-1 -4l8 -10l-5 -14l35 -43l7 -31l-8 -15l-13 -11l500 2z","x":786,"y":-947},{"n":"분쿄구","d":"M496 -522l10 7l19 39l3 0l-5 29l-9 28l31 37l13 24l-7 1l-8 -12l-7 3l-8 -10l-4 3l8 8l4 11l-3 18l16 6l0 16l-6 2l11 2l0 5l-12 0l-1 18l25 1l13 -4l0 7l8 0l1 5l0 6l-18 -2l-2 40l-15 -1l0 8l-11 1l-3 8l8 8l4 0l-1 3l6 6l-1 4l-10 -4l-9 5l-12 -4l-26 -16l-33 -1l-66 -14l-20 -1l-6 3l-9 -7l-14 -45l-59 -11l-3 10l-10 0l-2 5l-12 3l-7 -8l2 -11l-27 0l-5 -6l-4 0l-15 6l-5 -6l-14 -5l-1 -6l-7 -4l-1 -5l4 -5l-2 -3l-21 -13l-19 -6l7 -32l5 3l5 -9l14 -2l5 -4l4 2l6 -8l13 -4l-7 -14l1 -5l-5 -6l-5 -26l13 -4l-1 -3l9 -3l-4 -5l11 0l2 -5l22 14l6 -6l10 19l7 3l7 -9l10 -6l3 5l13 -2l-5 -9l16 -7l-5 -2l4 -3l-11 -20l25 -24l15 14l5 -3l3 -3l-3 -4l17 -15l-9 -9l5 -8l7 -1l5 -11l17 7l1 -2l11 18l4 0l5 6l9 -7l2 -3l-3 -2l3 -3l25 -8l40 25l11 11l9 -6z","x":384,"y":-375},{"n":"지요다구","d":"M570 -253l23 2l-2 20l7 1l-4 11l29 13l30 3l-3 22l21 2l-1 17l-3 -1l-1 11l5 5l-19 17l-2 -2l-19 14l-77 34l17 24l6 17l-8 25l-47 85l-24 10l-4 5l-10 1l-13 30l-30 -12l-35 -9l-6 0l-13 12l-5 -5l-1 -4l-13 -2l0 -3l-17 -4l-34 -26l-18 -49l-24 0l-9 -16l-10 -10l-12 -40l10 -37l51 -40l53 -81l-3 -3l19 -14l25 -1l66 14l33 1l26 16l12 4l9 -5l10 4l1 -4l-6 -6l1 -3l-4 0l-8 -8l3 -8l11 -1l0 -8l15 1l2 -19z","x":444,"y":-77},{"n":"다이토구","d":"M891 -479l-9 70l-10 25l-12 18l-52 60l-20 28l-29 66l-28 45l-9 20l-52 -19l1 -13l-21 -2l3 -22l-30 -3l-29 -13l4 -11l-7 -1l2 -20l-23 -3l0 -20l18 2l-1 -11l-8 0l0 -7l-13 4l-25 -1l1 -18l12 0l0 -5l-11 -2l6 -2l0 -16l-16 -6l3 -18l-4 -11l-8 -8l4 -3l8 10l7 -3l8 12l7 -1l-13 -24l-31 -37l9 -28l5 -29l-3 0l-15 -31l3 -5l13 11l11 26l17 0l13 -6l44 20l12 12l28 3l11 0l0 -5l6 -3l0 -9l18 -16l12 2l15 -3l14 -7l14 -25l9 3l-1 3l4 5l14 -1l0 3l4 0l1 9l52 -3l67 14z","x":698,"y":-355},{"n":"시나가와구","d":"M156 382l4 4l-24 16l-1 15l13 18l-5 7l2 8l7 -2l10 6l17 -8l1 -6l31 10l7 7l-4 14l4 3l-1 4l8 3l5 -9l4 2l0 9l4 5l3 -3l10 11l1 16l4 1l-2 24l9 3l13 -1l12 29l10 1l7 -3l-2 -4l4 -7l45 -6l9 17l11 3l8 -1l39 -21l7 0l0 13l41 -1l-1 -38l17 -1l3 86l4 36l-4 3l6 7l4 -3l3 5l5 -1l14 51l-4 1l2 5l-4 3l67 109l4 0l12 20l-52 32l-12 -19l-23 -1l3 49l-4 0l1 47l-53 1l0 -44l-47 0l0 3l-12 1l-6 -17l-76 27l-22 -2l-1 7l-46 0l-4 -12l-6 -2l13 -34l-13 -5l0 -11l-6 -6l-11 5l0 -5l-47 1l-6 19l-9 6l-11 -28l-3 -16l-17 -7l-6 -6l-4 -16l4 -1l-1 -8l-23 -7l-86 -7l-22 -20l-13 -17l-11 -24l0 -14l3 -1l0 -44l5 -8l14 -11l34 -48l3 -13l8 -1l2 -4l-21 -14l-42 -15l19 -8l24 -3l7 4l1 7l11 -3l2 4l14 -7l11 -1l3 -7l13 -2l22 -13l-1 -3l24 -10l-3 -5l4 -3l-5 -29l2 -14l-10 -35l12 -10l6 -18l18 -9l0 -4l13 -1zM558 536l40 61l-15 13l2 -5l-10 7l4 0l-4 3l-25 -36l0 -38l8 -5z","x":273,"y":703},{"n":"에도가와구","d":"M1304 433l16 -5l11 2l10 3l18 12l3 4l0 8l-9 16l-3 3l10 -17l1 -8l-22 -17l-5 0l-6 5l-2 7l5 2l-3 2l-6 -2l0 -11l-16 -4l-19 26l17 -26zM1218 409l8 -10l12 -1l22 11l6 7l25 6l4 12l-10 15l-6 3l11 -12l-9 -12l-27 -12l-24 -2l-11 1l-3 27l2 -33zM1567 -681l30 14l16 13l7 10l12 43l0 26l-24 56l-6 26l0 25l6 25l6 8l49 46l28 50l43 34l22 25l7 45l13 37l2 15l-41 74l-42 54l-12 11l-10 7l-18 6l-63 7l-32 8l-33 16l-13 14l-7 58l15 49l-2 34l2 83l-4 25l-25 81l-5 8l-76 50l-16 -7l-9 16l-13 -3l-22 6l-27 2l-18 -4l-1 4l-7 -1l6 0l1 -3l-24 -5l-17 -10l-1 3l2 3l-4 -2l2 -4l-13 -6l-16 -14l-15 -1l-5 -4l7 -137l-40 -2l11 -172l11 -52l-22 -22l9 -18l-1 -9l9 -41l2 -24l-1 -45l-26 -41l-77 -42l-5 -14l4 -11l35 -37l3 -8l-6 -9l-24 -10l-14 -12l-7 -12l-1 -12l8 -14l11 -7l10 -1l18 9l26 -22l74 84l26 -19l6 -10l4 1l4 -8l19 7l4 -4l5 5l7 -6l14 15l3 -3l3 2l5 -3l10 0l14 3l0 6l7 2l8 -15l1 -10l-18 -39l8 -16l0 -12l6 -12l8 -8l-2 -5l14 -9l-4 -29l1 -14l6 -1l11 -9l1 -17l-3 -7l4 -17l-3 -3l11 -8l4 -8l-3 -7l-4 1l-1 -8l2 -3l5 8l7 2l4 -6l11 3l8 -39l19 8l5 -2l-6 -12l8 -1l6 -17l6 -2l-3 -8l26 -13l-1 -9l-5 -1l-12 -9l1 -8l-5 -3l-15 1l2 -12l16 2l3 -4l12 -1l0 -4l10 0l1 -3l33 -1l24 27z","x":1427,"y":-124},{"n":"신주쿠구","d":"M183 -323l-4 7l9 6l1 6l14 5l5 6l15 -6l4 0l5 6l27 0l-2 11l7 8l12 -3l2 -5l10 0l3 -10l59 11l14 45l9 7l-18 13l3 3l-53 81l-52 41l-9 36l12 40l-7 5l-9 -18l-8 0l-15 35l-4 3l-10 -3l-15 2l1 5l-4 3l-2 -8l-8 3l-3 -5l-4 2l-10 7l4 8l-3 2l3 21l-4 8l-24 11l-3 -6l-5 1l-5 -12l-16 5l0 -27l15 -36l-27 -25l-33 -11l-2 -15l-8 -10l-3 -10l-25 2l-3 -2l-2 -12l-15 4l-42 22l-60 50l-17 -22l-5 -19l7 -5l1 -17l-14 3l-8 -11l1 -7l5 -10l3 0l4 -8l-9 -14l15 -16l23 -49l0 -8l-8 -23l1 -23l7 -24l29 -24l10 -4l9 -13l-13 -2l-1 3l-9 -4l-4 8l-8 -3l0 -7l-9 1l-50 13l-9 -8l-10 -3l10 -10l2 -10l-6 -1l2 -7l-6 -1l0 -4l-6 3l-5 -5l-2 -5l5 -12l-5 -19l-6 1l-11 -12l-5 -3l-1 4l-7 -5l-1 6l-14 6l-1 -3l2 -14l6 1l2 -13l8 0l-4 -22l2 -12l10 -26l3 -20l35 25l12 34l11 -2l2 13l41 -1l37 4l14 5l1 -4l26 -3l6 -11l39 5l-3 8l10 7l-5 11l2 6l3 8l4 1l-4 24l-7 6l2 13l5 2l-1 7l5 3l12 -5l25 4l5 -11l5 -2l22 16l12 -6l8 8l9 3l9 2l7 -3l2 5l4 -3l15 3z","x":73,"y":-211},{"n":"시부야구","d":"M-126 -120l-2 3l5 3l-1 4l-11 16l-1 7l8 11l14 -3l-1 17l-7 5l5 19l17 22l60 -50l42 -22l15 -4l2 12l3 2l25 -2l3 10l8 10l2 15l33 11l27 25l-15 36l0 27l16 -5l5 12l5 -1l7 14l-4 2l-13 -6l-9 27l7 7l-2 4l-5 -1l-42 52l13 12l16 22l13 9l-7 13l12 12l28 7l2 -4l31 14l7 -5l-10 25l2 11l5 2l7 45l-2 7l4 4l-8 23l-10 0l-20 27l-13 0l-16 -9l-38 7l-2 4l-14 -5l-72 -61l-23 -24l-8 -2l1 -5l-25 -27l-26 -44l-4 -6l-4 0l-6 -19l-8 -10l-17 -9l-21 -2l-20 -9l-43 -2l-15 -35l-4 -25l3 -23l-22 5l-64 4l-2 -2l2 -21l-4 -11l4 -8l27 -14l20 -29l28 -16l30 -30l7 -14l26 -23l10 -16l27 -22l7 0z","x":-30,"y":121},{"n":"기타구","d":"M-26 -1189l69 55l16 9l20 5l70 1l19 5l13 7l7 23l5 8l6 3l17 -2l59 -25l12 4l23 18l3 6l-6 67l4 17l-19 54l0 23l6 9l79 32l30 -3l34 -9l30 -20l10 9l6 11l1 12l-10 18l-81 54l-5 9l3 13l12 11l64 16l-3 17l-43 -4l0 3l-4 0l0 -3l-8 -1l-1 10l-9 15l4 1l-3 10l9 5l3 -3l8 6l20 1l4 3l-1 11l3 2l19 0l1 15l-5 6l25 20l2 -2l8 5l1 -6l10 1l3 -4l5 0l0 13l16 12l19 1l2 14l5 3l-1 5l9 3l9 11l-40 17l-20 13l4 5l-7 7l-17 -1l2 10l-13 12l-11 -11l-39 -24l-8 0l-22 -10l-14 -26l-15 -11l-3 10l-2 -4l-12 -1l-1 4l-2 -1l-2 -6l5 -12l-21 -13l-6 -2l-45 18l-8 -2l-5 -9l-18 -17l8 -12l-1 -6l-38 4l-16 26l-12 13l7 8l-2 -2l-5 5l-7 -2l-12 -12l-17 -7l-5 -32l9 -17l7 4l1 -11l5 1l1 -4l-4 -1l4 -9l-3 -3l3 -17l3 -3l0 -22l-18 -19l-10 -21l-32 -44l-17 -17l-19 -3l-5 -14l-6 2l-4 -8l-5 2l-16 -13l-6 -40l-27 -107l6 -12l0 -10l-8 -5l-18 15l-12 5l-22 -4l-17 -6l-19 -13l-15 -24l0 -8l10 -30l45 -66l5 -17z","x":235,"y":-859},{"n":"도시마구","d":"M158 -649l5 31l17 7l12 12l7 2l5 -5l2 2l-7 -8l12 -13l16 -26l38 -4l1 6l-8 12l18 17l5 9l8 2l45 -18l6 2l21 13l-5 12l2 6l2 1l1 -4l12 1l2 4l3 -10l15 11l10 22l26 14l-18 7l-3 3l3 2l-2 3l-9 7l-5 -6l-4 0l-11 -18l-1 2l-17 -7l-5 11l-7 1l-5 8l9 9l-17 15l3 4l-3 3l-5 3l-15 -14l-25 24l11 20l-4 3l5 2l-16 7l5 9l-13 2l-3 -5l-10 6l-7 9l-7 -3l-10 -19l-6 6l-22 -14l-2 5l-11 0l4 5l-9 3l1 3l-13 4l5 26l5 6l-1 5l7 14l-13 4l-6 8l-4 -2l-5 4l-14 2l-5 9l-5 -3l-7 30l1 3l26 9l15 11l-1 2l-15 -3l-4 3l-2 -5l-7 3l-9 -2l-9 -3l-8 -8l-12 6l-22 -16l-5 2l-5 11l-25 -4l-12 5l-5 -3l1 -7l-5 -2l-2 -13l7 -6l4 -24l-4 -1l-3 -8l-2 -6l5 -11l-10 -7l3 -8l-39 -5l-6 11l-26 3l-1 4l-14 -5l-37 -4l-41 1l-2 -13l-11 2l-12 -34l-32 -24l9 -18l-4 -5l10 -17l-4 -10l3 -9l7 -8l6 -17l5 0l-4 -10l72 -25l24 -23l8 6l7 -1l1 9l35 -2l3 27l14 -2l11 28l-3 2l1 5l14 5l2 -14l34 -43l8 -24l10 -18l27 5l8 -1l0 -3l38 8z","x":94,"y":-515},{"n":"주오구","d":"M722 -147l-1 22l3 15l26 39l3 11l-3 25l-30 50l-9 23l-3 17l1 30l14 59l1 48l5 58l-126 107l-54 -68l-22 -4l7 -41l-51 -34l0 -10l22 -30l5 -24l-5 -15l-24 -9l-10 -11l13 -28l10 -1l4 -5l24 -10l47 -85l8 -25l-6 -17l-17 -24l77 -34l19 -14l2 2l19 -17l-5 -5l1 -11l3 1l0 -4l52 19z","x":626,"y":101},{"n":"스기나미구","d":"M-553 -397l-5 13l7 15l39 4l10 7l29 10l-1 20l10 13l66 25l25 -3l34 1l-1 42l22 3l2 33l4 0l3 17l5 5l-7 19l-5 1l-4 7l5 13l28 -4l6 8l5 -2l5 13l8 -4l1 3l-4 5l2 15l-6 3l1 6l-4 5l-19 12l-4 11l-9 7l-12 6l-14 1l3 20l5 -4l3 7l-9 11l-2 14l4 1l6 9l-6 5l-1 5l15 -5l9 10l12 0l1 4l7 0l-2 14l-13 -3l1 6l4 0l3 10l-16 6l-5 9l4 11l-3 12l-54 19l-38 7l-28 18l-46 9l0 3l-9 6l-11 5l-17 -2l2 -7l-36 -14l-61 -10l0 -10l-13 -3l1 -6l-21 -20l-64 -27l-4 -5l-19 -4l15 20l26 18l10 2l-3 27l-4 5l-16 -7l-22 0l0 -7l-4 -1l-9 1l1 4l-5 0l-1 -36l3 0l0 -9l-3 -10l-4 0l1 -5l-6 1l-3 3l-4 -17l-29 -29l-43 -12l-31 -3l-8 -8l4 -12l-16 -13l-9 -16l9 -8l12 -2l0 -9l7 -1l-17 -19l-42 -31l13 -16l16 8l21 -64l21 -42l-3 -7l-16 -11l-21 -23l-32 -24l2 -14l-14 -28l-2 -11l3 -11l13 -15l14 -5l15 2l24 20l8 -10l10 -24l0 -7l7 -1l27 -16l16 -15l2 -6l61 -27l48 -16l8 5l44 -6l22 3l-1 8l26 54l6 20l11 14l13 2l5 6z","x":-606,"y":-168},{"n":"이타바시구","d":"M-26 -1189l-5 17l-45 66l-10 30l0 8l15 24l19 13l17 6l22 4l12 -5l18 -15l5 2l3 13l-6 12l27 107l6 40l16 13l5 -2l4 8l6 -2l5 14l19 3l17 17l32 44l10 21l18 19l0 22l-3 3l-3 17l3 3l-4 9l4 1l-1 4l-5 -1l-1 11l-7 -4l-9 17l-38 -7l0 3l-8 1l-27 -5l-10 18l-8 24l-34 43l-2 14l-14 -5l-1 -5l3 -2l-11 -28l-14 2l-3 -27l-35 2l-1 -9l-7 1l-8 -6l-24 23l-57 22l-18 4l-11 -19l11 -16l3 -16l-40 -16l-4 5l-8 -6l-5 6l-4 -3l-9 7l0 -11l23 -63l-14 -26l2 -44l-18 -21l-19 -55l-6 -11l-8 3l-50 -14l-43 -3l-29 1l-9 -3l-26 6l-16 -6l-24 -17l-8 11l-10 6l-48 4l-1 -11l-10 0l0 -6l-27 -18l-7 6l1 -23l-4 -6l3 -23l-5 -6l-29 -4l2 -12l-7 -14l10 -15l16 -11l1 -16l10 -10l10 3l11 -9l4 -11l-5 -8l6 -8l12 -5l4 -8l5 -3l10 2l15 -8l-2 -3l14 -13l12 -51l23 -3l34 7l40 -25l148 0l22 8l27 4l30 -3l29 -9l83 0l18 11z","x":-191,"y":-925},{"n":"세타가야구","d":"M-858 -22l29 4l43 12l19 18l10 11l4 17l8 -4l0 5l4 0l4 14l-1 5l-3 0l1 36l5 0l-1 -4l9 -1l4 1l0 7l22 0l16 7l4 -5l3 -27l-10 -2l-26 -18l-15 -20l19 4l4 5l64 27l21 20l-1 6l13 3l0 10l61 10l36 14l-2 7l6 1l13 1l18 -11l0 -3l46 -9l28 -18l38 -7l54 -19l3 11l64 -4l22 -5l-3 23l4 25l11 29l14 16l3 15l26 42l10 7l3 9l17 20l12 23l0 12l-6 10l7 33l-4 21l15 33l2 15l-18 41l1 6l-24 45l-14 47l-13 -2l-13 -19l-36 -25l-63 -22l-22 2l7 15l-4 27l13 7l4 28l11 17l4 12l3 1l-4 3l7 22l-14 2l-2 9l3 7l-14 10l-5 27l5 4l-4 6l4 1l0 7l3 3l-3 4l5 7l-8 5l4 2l-1 4l16 12l19 9l8 1l39 -16l18 -3l13 4l12 13l6 11l3 25l5 2l-1 32l2 16l3 2l-4 5l3 25l-16 13l-25 18l-48 -73l-8 9l-5 -3l0 -4l-10 0l0 -7l-15 6l-5 -7l-14 13l-14 -13l-10 -3l-6 3l-2 4l-11 4l-13 24l-16 -8l-7 14l11 7l-2 4l4 2l3 -4l5 3l-2 5l3 2l2 -5l18 10l0 2l-9 -1l-15 33l-39 -25l-13 -24l-73 -52l-23 -29l-15 -4l-26 -22l-2 -3l4 -6l-3 -2l-19 -12l-7 -2l-1 2l-10 -9l-15 -5l-14 -18l-41 -26l-6 -1l-19 6l-20 -14l-7 -12l-21 -5l-7 0l-16 9l-12 -1l-45 -29l-32 1l-22 8l-10 -1l-14 -7l-7 -28l3 -7l-1 -19l5 -7l10 8l9 -1l0 -10l8 -18l5 -2l-5 -6l-9 -1l0 -13l4 -6l-5 -10l-8 -7l1 -20l-3 1l-11 -14l-16 -7l-16 -28l-11 -32l2 -6l10 -5l0 -4l6 0l3 -5l3 -15l-3 -6l7 -5l-2 -5l16 11l20 -8l-1 -55l10 -1l-2 -27l-5 -12l-11 0l-8 -17l-2 -16l3 -25l-9 -6l2 -2l-2 -4l-13 -2l-6 -14l9 -4l3 -6l11 -8l5 0l-13 -47l-29 -15l-5 -7l-15 -7l3 -5l5 -1l32 2l0 -2l-2 -6l-3 0l-2 -23l2 -9l13 -11l-1 -7l-1 -4l-8 -6l0 -4l-12 -5l-3 -5l53 3l-2 -3l-49 -6l9 -2l44 7l10 4l9 -5z","x":-527,"y":403},{"n":"스미다구","d":"M978 -634l36 69l80 102l61 70l-26 22l-18 -9l-10 1l-11 7l-8 14l1 12l7 12l14 12l28 13l1 11l-37 40l-4 11l8 17l-6 1l-33 -1l-14 -10l-83 -40l8 150l-51 3l0 7l-16 1l4 33l-21 2l1 14l-36 2l-2 -17l-35 2l-5 -11l-5 -3l-20 12l-3 -13l-10 2l-1 -6l-12 2l-1 -8l-8 0l0 4l-17 11l-10 -17l-3 -15l0 -15l6 -20l25 -38l36 -80l20 -28l52 -60l12 -18l9 -20l5 -26l8 -69l11 -31l24 -37l1 -21l22 -33l26 -13z","x":938,"y":-322},{"n":"나카노구","d":"M-187 -495l-3 20l-10 26l-2 12l4 22l-8 0l-2 13l-6 -1l-2 14l1 3l14 -6l1 -6l7 5l1 -4l5 3l11 12l6 -1l5 19l-5 12l2 5l5 5l6 -3l0 4l6 1l-2 7l6 1l-2 10l-10 10l10 3l9 8l50 -13l9 -1l0 7l8 3l4 -8l9 4l1 -3l13 3l-9 12l-10 4l-29 24l-7 24l-1 23l8 23l0 8l-23 49l-15 16l2 6l-30 22l-10 16l-26 23l-7 14l-30 30l-28 16l-19 28l-11 8l-3 -10l-4 0l-1 -6l13 3l2 -14l-7 0l-1 -4l-12 0l-9 -10l-15 5l1 -5l6 -5l-6 -9l-4 -1l2 -14l9 -11l-3 -7l-5 4l-3 -20l14 -1l12 -6l9 -7l4 -11l19 -12l4 -5l-1 -6l6 -3l-2 -15l4 -5l-1 -3l-8 4l-5 -13l-5 2l-6 -8l-28 4l-5 -13l4 -7l5 -1l7 -19l-5 -5l-3 -17l-4 0l-2 -33l-22 -3l1 -42l-34 -1l-25 3l-66 -25l-10 -13l1 -20l-29 -10l-10 -7l-39 -4l-7 -16l5 -12l-7 -8l-9 1l-8 -6l-38 -88l19 -38l5 -4l-1 -11l39 -3l13 1l4 10l3 -1l6 21l11 0l13 41l9 3l5 7l0 8l31 11l31 -2l0 -12l25 -2l10 6l31 -1l33 6l0 -8l17 -1l7 -5l7 -10l13 -31l16 2l1 -4l8 1l2 -7l8 -1l3 -4l5 3l9 -12l13 -1l16 8l20 21l4 0l-5 13l-3 -1z","x":-305,"y":-309},{"n":"네리마구","d":"M-836 -982l-1 18l57 13l4 4l-4 5l-11 -2l-5 3l-29 20l-9 11l8 8l-5 3l4 8l38 -19l12 10l16 -9l7 15l13 6l9 -15l11 -8l4 9l-3 5l3 3l6 -10l24 -5l15 6l-4 17l7 9l1 11l42 -3l9 -44l13 -17l-3 -7l-9 -6l4 -55l6 7l-2 12l29 4l5 6l-3 23l4 6l-1 23l7 -6l27 18l0 6l10 0l1 11l48 -4l10 -6l8 -11l24 17l16 6l26 -6l9 3l29 -1l43 3l50 14l8 -3l6 11l19 55l18 21l-2 44l14 26l-23 63l0 11l9 -7l4 3l5 -6l8 6l4 -5l40 16l-3 16l-11 16l7 15l7 3l4 10l-5 0l-6 17l-7 8l-3 9l4 10l-10 17l4 5l-3 4l-5 1l-23 -24l-13 -5l-13 1l-9 12l-5 -3l-3 4l-8 1l-2 7l-8 -1l-1 4l-16 -2l-13 31l-7 10l-7 5l-17 1l0 8l-33 -6l-31 1l-10 -6l-25 2l0 12l-31 2l-31 -11l0 -8l-5 -7l-9 -3l-13 -41l-11 0l-6 -21l-3 1l-4 -10l-47 1l-5 1l1 11l-5 4l-17 35l-22 -3l-47 6l-5 -5l-48 16l-61 27l-2 6l-16 15l-27 16l-7 1l0 7l-10 24l-8 10l-24 -20l-15 -2l-14 5l-13 15l-3 11l2 11l14 28l-2 14l-49 -29l-44 -42l-77 -27l-4 -26l7 -27l27 -72l-17 -22l8 -17l-1 -47l-11 -46l16 -2l-8 -25l12 1l-2 -19l-6 -11l-5 -2l1 -19l-6 -1l-6 -15l-4 -1l2 -8l-16 -21l-3 -17l-8 -2l2 -4l5 -8l9 0l3 8l4 1l10 -1l0 -8l7 -2l6 2l-1 -7l8 -1l4 6l11 -3l-9 -23l3 -1l3 3l14 -4l-1 -6l18 2l-2 -20l21 1l4 -10l6 -4l0 -14l21 -2l0 -7l2 7l10 -1l-3 -12l16 -5l-1 -7l3 -3l0 -9l22 -5l16 -32l38 13l4 -2l2 -13l24 5z","x":-669,"y":-678},{"n":"고토구","d":"M669 505l21 31l-2 5l-30 20l95 143l-15 26l-5 3l1 2l-27 44l-10 -16l-3 2l-67 -101l3 -2l-4 0l-31 -47l-2 1l11 -9l-24 -38l29 -24l60 -40zM730 524l46 73l10 11l-2 2l12 13l-5 7l-3 -1l-17 33l-4 -1l-74 -112l37 -25zM1023 494l90 -10l0 6l11 -1l1 3l4 -1l-1 -3l3 0l0 -7l7 -1l-12 179l-25 16l-40 -60l19 -12l-11 -15l-18 12l-16 1l-12 -107zM988 495l1 2l-9 2l0 -2l8 -2zM998 377l27 -3l-11 30l66 -7l-1 21l-62 8l3 29l-36 5l-6 -51l21 -26l-1 -6zM1100 -230l68 35l11 9l21 36l1 24l-1 33l-10 53l1 9l-9 18l22 22l-11 52l-11 172l-21 -1l-1 19l-6 7l-14 206l-134 13l-18 4l-1 4l-2 -19l101 -13l7 -93l-105 11l-7 9l-116 14l4 37l-46 6l1 36l-9 17l1 4l3 -1l1 5l-2 1l12 39l-29 44l-50 -75l-4 2l4 -3l-3 -5l-39 25l-16 -24l-4 2l-41 -58l2 -1l2 2l-13 -19l4 -25l-40 -46l126 -107l-7 -115l-13 -50l-1 -24l6 -31l10 -22l22 -34l6 -18l1 -16l-3 -11l-16 -22l17 -11l0 -4l8 0l1 8l12 -2l1 6l10 -2l3 13l20 -12l5 3l5 11l35 -2l2 17l36 -2l-1 -14l21 -2l-4 -33l16 -1l0 -7l51 -3l-8 -150l83 40l14 10l39 0z","x":928,"y":206},{"n":"메구로구","d":"M143 384l0 3l-18 9l-6 18l-12 10l10 35l-2 14l5 29l-4 3l3 5l-24 10l1 3l-22 13l-13 2l-3 7l-11 1l-14 7l-2 -4l-11 3l-1 -7l-7 -4l-24 3l-19 8l42 15l21 14l-2 4l-8 1l-3 13l-34 48l-14 11l-5 8l0 44l-3 1l0 14l-13 -18l-21 -16l-42 -8l-13 -14l-4 0l6 38l-2 20l4 0l-2 20l-22 -5l-5 13l-8 1l1 33l3 5l-5 -1l0 -22l-5 -2l-3 -25l-6 -11l-13 -14l-12 -3l-18 3l-40 16l-21 -7l-21 -15l1 -4l-4 -3l8 -4l-5 -7l3 -4l-3 -3l0 -7l-4 -1l4 -6l-5 -4l5 -27l14 -10l-3 -7l2 -9l14 -2l-7 -22l4 -3l-3 -1l-4 -12l-11 -17l-4 -28l-13 -7l4 -27l-7 -15l22 -2l63 22l36 25l13 19l13 2l14 -47l24 -45l-1 -6l18 -41l-2 -15l-15 -33l4 -21l-6 -18l-1 -17l6 -9l-3 -20l-9 -14l-17 -20l-3 -9l-10 -7l-26 -42l-3 -14l-7 -10l40 1l20 9l21 2l17 9l8 10l6 19l4 0l4 6l26 44l25 27l-1 5l8 2l23 24l72 61l14 5l2 -4l39 -7l18 10z","x":-95,"y":500},{"n":"가쓰시카구","d":"M1291 -1148l8 -5l32 5l31 -19l25 -6l29 4l16 21l2 16l-5 10l-22 18l-14 24l-2 14l4 18l2 -2l11 21l10 11l22 6l33 -9l52 -19l49 13l6 21l-6 19l-14 13l-84 45l-15 32l-3 22l10 27l14 22l6 40l55 78l-33 1l-1 3l-10 0l0 4l-12 1l-3 4l-16 -2l-2 12l15 -1l5 3l-1 8l12 9l5 1l1 9l-26 13l3 8l-6 2l-6 17l-8 1l6 12l-5 2l-19 -8l-8 39l-11 -3l-4 6l-7 -2l-5 -8l-2 3l1 8l4 -1l3 7l-4 8l-11 8l3 3l-4 17l3 7l-1 17l-11 9l-6 1l-1 14l4 29l-14 9l2 5l-8 8l-6 12l0 12l-8 16l18 39l-1 10l-8 15l-4 0l-3 -2l0 -6l-14 -3l-10 0l-5 3l-3 -2l-3 3l-14 -15l-7 6l-5 -5l-4 4l-19 -7l-4 8l-4 -1l-6 10l-26 19l-135 -154l-88 -114l-48 -103l-28 -43l3 -12l-12 -11l-1 -44l2 -7l30 -10l0 5l21 -2l4 44l19 4l7 -3l7 -59l21 -3l-6 4l-6 24l1 11l16 8l19 -3l9 -11l-1 -35l7 -14l30 3l4 4l13 -2l2 -28l34 -5l13 -19l18 -11l45 -4l3 29l4 13l36 13l12 -15l4 -10l2 -10l-5 -21l-82 -119l-24 -62l-7 -31l-1 -24l4 -11l17 -18l4 7l10 5l41 37l19 8l5 -2l10 -12l10 -26z","x":1265,"y":-733},{"n":"미나토구","d":"M550 504l3 2l-13 21l-3 -1l13 -22zM597 508l-1 -4l2 3l-1 1zM558 536l22 -19l6 0l22 -15l22 -19l-19 -30l-3 -2l-13 9l-5 15l-15 -6l5 -12l14 0l21 -14l11 -3l43 65l-60 40l-29 24l-22 -33zM568 477l3 4l-3 1l-12 19l-3 -2l15 -22zM541 470l-8 -2l4 -12l12 4l-3 8l-5 2zM256 -15l10 10l9 16l24 0l18 49l34 26l17 4l0 3l13 2l1 4l5 5l15 -12l39 9l31 12l9 9l18 5l10 13l0 21l-4 9l-22 30l-1 8l4 5l48 31l-7 41l-21 -4l-11 1l-15 64l0 4l11 0l0 81l-7 0l-33 -21l-6 2l-17 44l21 8l32 0l2 56l-17 1l1 38l-41 1l0 -13l-7 0l-39 21l-8 1l-11 -3l-9 -17l-45 6l-4 7l2 4l-7 3l-10 -1l-12 -29l-13 1l-9 -3l2 -24l-4 -1l-1 -16l-10 -11l-3 3l-4 -5l0 -9l-4 -2l-5 9l-8 -3l1 -4l-4 -3l4 -14l-7 -7l-31 -10l-1 6l-17 8l-10 -6l-7 2l-2 -8l5 -7l-13 -18l2 -16l23 -15l-4 -4l17 -26l10 0l8 -23l-4 -4l2 -7l-7 -45l-5 -2l-2 -11l10 -25l-7 5l-31 -14l-2 4l-28 -7l-12 -12l7 -13l-13 -9l-16 -22l-13 -12l42 -52l5 1l2 -4l-7 -7l9 -27l13 6l4 -2l-4 -8l24 -11l4 -8l-3 -21l3 -2l-4 -8l14 -9l3 5l8 -3l2 8l4 -3l-1 -5l15 -2l10 3l4 -3l15 -35l8 0l9 18l7 -5z","x":323,"y":285},{"n":"오타구","d":"M-43 715l28 49l24 22l86 7l23 7l1 8l-4 1l4 16l6 6l17 7l3 16l11 28l9 -6l6 -19l47 -1l0 5l11 -5l6 6l0 11l13 5l-13 34l6 2l4 12l46 0l1 -7l22 2l76 -27l6 17l12 -1l0 -3l47 0l0 44l53 -1l-1 -47l4 0l-3 -49l23 1l12 19l52 -32l-2 4l32 52l-30 31l11 0l5 5l-19 0l-26 29l-5 11l14 12l3 0l43 -44l7 6l11 -12l16 14l6 -7l2 2l-6 7l13 11l4 -3l3 3l-3 3l36 35l-1 3l-5 2l-12 14l1 2l-16 7l-135 0l-3 -14l5 -3l8 0l10 -11l-12 -14l-29 32l-14 10l-53 0l-14 -12l-36 17l1 4l-31 11l-8 -2l-14 -19l-8 5l3 10l-6 6l-39 8l-24 -10l-104 3l106 -1l20 9l41 -6l-10 9l-6 -5l-2 2l32 30l-14 9l16 -7l3 1l16 16l-9 8l13 -5l38 38l12 18l-3 4l3 4l3 -1l16 12l4 -13l24 -16l20 14l16 24l6 2l59 -85l71 -10l22 -6l23 -1l54 90l37 66l-780 0l-23 -11l-60 -9l-35 -24l-37 -18l-22 -18l-20 -30l-41 -125l-15 -57l-6 -14l-21 -27l-19 -15l-41 4l-1 -4l-19 1l-9 -4l15 -33l9 1l0 -2l-18 -10l-2 5l-3 -2l2 -5l-5 -3l-3 4l-4 -2l2 -4l-11 -7l7 -14l16 8l13 -24l11 -4l2 -4l6 -3l10 3l14 13l14 -13l5 7l15 -6l0 7l10 0l0 4l5 3l8 -9l48 73l41 -31l-3 -25l4 -5l-3 -2l-2 -20l1 -6l5 1l-3 -5l-1 -33l8 -1l5 -13l22 5l2 -11l0 -9l-4 0l2 -20l-6 -38l4 0l13 14l42 8l28 24zM465 1086l3 -30l50 0l6 -6l59 -1l14 2l1 3l-65 97l-58 -35l-10 -30zM380 1056l29 -10l1 4l14 -4l6 3l9 8l19 53l-2 4l-48 13l-39 -38l3 -26l8 -7zM358 1084l-2 -1l1 -3l1 4z","x":175,"y":1031},{"n":"아라카와구","d":"M931 -579l-4 17l-26 40l-10 41l-67 -12l-52 3l-1 -9l-4 0l0 -3l-14 1l-4 -5l1 -3l-9 -3l-14 25l-14 7l-15 3l-12 -2l-18 16l0 9l-6 3l0 5l-39 -3l-12 -12l-44 -20l-13 6l-17 0l-11 -26l-6 -8l-7 -3l-3 5l-4 -8l-11 -7l5 -6l-2 -10l17 1l7 -7l-4 -5l20 -13l40 -17l-9 -11l-9 -3l1 -5l-5 -3l-2 -14l-22 -3l-13 -10l0 -13l-5 0l-3 4l-10 -1l-1 6l-8 -5l-2 2l-25 -20l5 -6l-1 -15l-19 0l-3 -2l1 -11l-4 -3l-20 -1l-8 -6l-3 3l-9 -5l3 -10l-4 -1l9 -15l1 -10l8 1l0 3l4 0l0 -3l43 4l3 -17l52 9l48 4l111 -4l39 15l17 17l3 11l-3 12l-18 15l-1 12l12 29l20 21l19 10l59 12l57 -23l20 -2l12 4l8 7l5 21z","x":661,"y":-599},{"n":"조후시","d":"M-1380 80l4 1l1 11l14 9l-9 22l25 1l3 -13l6 -4l24 22l-2 4l-7 -3l1 15l4 1l3 -3l4 2l1 6l-5 2l26 4l10 -7l4 -8l6 -1l3 -7l-17 -9l-7 -24l12 -106l15 2l1 -12l5 0l-1 -6l11 0l1 6l43 7l0 -5l20 -8l17 -2l0 -4l9 1l5 -4l3 3l17 -1l9 29l2 19l17 54l0 41l10 34l10 12l17 4l33 -6l18 24l-5 2l-6 -12l-10 -6l0 6l8 4l18 23l9 -4l7 -7l1 -8l4 -6l30 -25l-18 -5l-6 -19l3 -3l-5 -12l-5 0l1 6l-2 -5l-3 -1l3 -13l7 -2l0 -7l-7 -10l-22 -7l-3 -3l7 -4l19 3l10 10l5 -3l4 9l-3 1l2 8l6 0l0 5l3 -3l24 1l5 -9l30 19l10 36l-5 0l-11 8l-3 6l-9 4l6 14l13 2l2 4l-2 2l9 6l-3 25l2 16l8 17l11 0l5 12l2 27l-10 1l1 55l-20 8l-18 -14l-14 10l-11 -13l-1 -19l-15 2l0 10l4 2l-16 0l-13 -9l13 -9l-11 2l-2 3l-4 -1l-13 -6l-5 -10l-16 -4l-13 3l-11 11l-14 0l-3 3l0 12l-6 3l-16 -1l-8 4l0 10l-20 48l-2 50l-4 7l-5 31l-37 -14l-52 -1l-13 -3l-14 -23l-12 -2l-2 -5l-12 -1l-33 -12l-37 -8l-41 -25l-7 0l1 -300z","x":-1163,"y":229},{"n":"미타카시","d":"M-919 -139l41 30l17 19l-7 1l0 9l-12 2l-9 8l9 16l16 13l-4 12l8 8l-7 4l-10 -4l-44 -7l-9 2l51 7l0 2l-5 1l-48 -4l3 5l12 5l0 4l8 6l1 4l1 7l-13 11l-2 9l2 23l3 0l2 6l0 2l-32 -2l-5 1l-3 5l15 7l5 7l29 15l3 11l-30 -19l-5 9l-24 -1l-3 3l0 -5l-6 0l-2 -8l3 -1l-4 -9l-5 3l-9 -9l-13 -5l-14 5l3 3l25 9l4 15l-7 2l-3 13l3 1l2 5l-1 -6l5 0l5 12l-3 3l6 19l19 5l-31 25l-4 6l-1 8l-8 8l-10 3l-16 -23l-8 -4l0 -6l10 6l6 12l5 -2l-19 -25l-35 7l-19 -8l-15 -42l0 -41l-17 -54l-2 -19l-9 -29l-17 1l-3 -3l-5 4l-9 -1l0 4l-17 2l-20 8l0 5l-43 -7l-1 -6l-11 0l1 6l-5 0l-1 12l-15 -2l-12 106l7 24l17 9l-3 7l-6 1l-4 8l-7 6l-3 1l-26 -4l4 -1l0 -7l-5 -2l-2 3l-4 -1l1 -8l-4 -3l3 -4l6 3l2 -4l-24 -22l-6 4l-3 13l-25 -1l9 -22l-14 -9l-1 -11l-5 -2l0 -178l18 11l-7 -58l23 -3l-2 -41l20 7l1 30l46 0l2 -14l54 16l13 1l-5 -118l166 79l15 15l2 -15l16 -9l7 -14l10 -2l27 26l39 16l17 33z","x":-1125,"y":-47},{"n":"니시도쿄시","d":"M-1113 -816l6 2l3 17l16 23l-2 6l4 1l6 15l6 1l-1 19l5 2l6 11l2 19l-12 -1l8 25l-16 2l11 46l1 47l-8 17l17 22l-27 72l-7 27l4 26l-55 -3l-30 10l-47 41l-98 56l-40 -12l-20 -2l0 -271l11 -5l-11 -11l0 -32l26 0l93 -102l17 -3l3 17l24 -10l0 -9l12 1l4 -8l12 4l14 -1l1 -20l3 0l4 -12l8 -1l5 -6l17 4l16 -4l-1 -15l10 -5z","x":-1226,"y":-557},{"n":"고마에시","d":"M-913 335l2 8l-7 5l3 6l-3 15l-3 5l-6 0l0 4l-10 5l-2 6l11 32l16 28l16 7l11 14l3 -1l-1 20l8 7l5 10l-4 6l0 13l9 1l5 6l-5 2l-8 18l0 10l-9 1l-10 -8l-5 7l1 19l-3 7l7 28l-42 -26l-43 -11l-11 3l-15 -2l-33 -17l-37 -31l-18 -4l4 -23l-29 -19l0 -9l-5 -3l5 -31l4 -7l2 -50l20 -48l0 -10l8 -4l16 1l7 -4l-1 -11l17 -3l11 -11l13 -3l16 4l5 10l13 6l4 1l2 -3l11 -2l-13 9l13 9l16 0l-4 -2l0 -10l12 0l2 -2l2 19l11 13l10 -9l6 -1z","x":-997,"y":451},{"n":"무사시노시","d":"M-920 -318l33 25l19 21l16 11l3 7l-21 42l-21 64l-16 -8l-13 16l-16 -32l-39 -16l-27 -26l-10 2l-7 14l-16 9l-2 15l-15 -15l-165 -79l4 118l-13 -1l-54 -16l-2 14l-46 0l-1 -30l-20 -7l-3 -21l-8 0l0 -10l-2 -1l2 -69l-21 -3l0 -33l20 2l40 12l98 -56l42 -39l24 -10l19 -2l47 3l72 25l13 9l36 35l50 30z","x":-1117,"y":-280}],"rivers":[{"n":"다마강","d":"M-1381 388l65 16l67 36l53 -3l75 24l30 28l31 71l22 11l81 29l32 7l44 0l45 24l14 2l30 -12l19 6l59 42l41 13l23 -1l46 21l44 44l161 127l55 25l61 8l34 44l12 54l45 133l16 28l19 19l85 47l73 19","w":1},{"n":"간다강","d":"M-938 -171l21 38l37 23l24 29l17 6l20 -4l26 22l36 13l24 17l45 -4l33 6l13 13l9 26l26 26l14 7l52 -8l44 52l26 8l25 -7l2 -12l18 -16l32 -66l19 -7l18 9l27 0l12 -8l24 -81l26 -21l39 -7l21 -14l21 0l33 11l28 -11l31 -59l-7 -38l7 -41l45 -34l9 -42l15 -9l69 7l21 9l33 -10l22 17l60 6l32 21l44 -3l31 14l61 11l20 57l32 -4l101 14l79 45l94 4l49 18","w":0},{"n":"니혼바시강","d":"M413 -226l22 81l17 8l20 23l24 2l25 19l31 7l29 40l56 4l32 44l44 29","w":0},{"n":"에도가와강","d":"M1551 -1200l-22 55l44 142l-13 23l-87 57l-15 34l4 31l20 34l8 43l17 26l46 60l56 40l14 23l10 50l-30 84l6 58l49 49l30 47l65 57l4 13l41 34l70 45","w":1},{"n":"메구로강","d":"M-118 286l18 13l38 5l49 36l101 122l38 57l85 40l64 56l15 24l33 3l69 -20","w":0},{"n":"아라카와강","d":"M-394 -1200l4 0M-239 -1200l54 11l64 -11M-45 -1200l97 69l44 11l58 0l62 31l71 5l29 29l52 95l107 69l26 70l21 22l34 19l74 10l161 -27l44 2l46 20l42 41l31 49l64 130l208 246l20 30l25 59l5 71l-11 47l-58 105l-13 47l-10 163l6 43l-13 188","w":1},{"n":"나카강","d":"M1225 -1200l-50 54l-2 37l22 74l20 37l74 108l-4 29l-26 33l-5 19l29 36l39 99l-39 33l0 10l21 28l0 29l-11 4l-36 -12l-14 11l-1 19l22 31l-1 14l-40 9l-19 23l-35 9l-8 13l10 37l75 87l36 57l12 29l12 69l-14 83l-60 116l-14 172l-5 20l-23 39","w":1},{"n":"스미다강","d":"M272 -1055l20 22l19 37l-1 22l-18 37l3 32l82 34l62 -8l15 12l4 12l-8 22l-53 34l-3 20M819 -587l24 -2l60 -23l15 3l12 14l0 30l-23 31l-13 31l-14 100l-8 22l-76 91l-35 77l-37 59l-1 40l24 36l10 28l-44 81l-10 40l-35 24l-25 54l-102 89l-14 47","w":1},{"n":"구 에도가와강","d":"M1757 -274l19 97l-29 54l-54 72l-24 17l-110 19l-43 29l-10 58l15 45l-4 147l-32 92l-75 55l-10 15","w":1}],"parks":[{"n":"우에노 공원","d":"M620 -344l-23 46l-1 -1l-1 -9l-2 -11l-1 -2l0 21l-25 7l-6 -5l-10 -57l16 1l2 7l-2 -25l5 -4l-11 -13l7 -7l31 -17l6 14l9 -14l23 21l7 -9l1 23l-25 34z","x":597,"y":-351,"a":6718},{"n":"고쿄(황궁)","d":"M429 -89l1 17l24 33l-3 8l7 3l-4 6l-7 -2l-9 24l9 3l-4 9l-9 -4l-22 9l-7 -2l-16 -22l-8 0l-7 -19l-6 -4l1 -18l5 -30l22 -4l21 -11l7 -2l5 6z","x":410,"y":-35,"a":6448},{"n":"가사이 임해공원","d":"M1236 372l28 2l2 -34l5 1l124 56l-8 14l-13 -3l-27 6l-38 0l-39 -11l-33 -25l-1 -6z","x":1293,"y":376,"a":6013},{"n":"메이지 신궁","d":"M-16 -9l46 22l1 36l-17 59l-14 -20l-14 -5l-22 -29l-5 -36l7 -16l18 -11z","x":-3,"y":52,"a":5465},{"n":"신주쿠 교엔","d":"M42 -79l16 -10l46 15l17 0l-4 31l9 9l-1 9l-11 9l-7 -4l-5 7l-23 -4l-23 -15l-20 -18l-2 -15l8 -14z","x":77,"y":-58,"a":4743},{"n":"요요기 공원","d":"M-64 122l46 -4l9 32l-12 -21l-27 13l-16 -20zM-73 105l5 -44l10 4l9 -12l11 -4l4 13l20 21l14 6l13 19l-12 5l-67 7l-7 -15z","x":-39,"y":86,"a":4359},{"n":"고쿄 외원","d":"M485 45l-52 -26l2 -7l10 3l6 -14l-7 -3l5 -18l7 2l2 -10l11 3l3 -11l14 3l3 -12l20 3l-24 87z","x":472,"y":-1,"a":3571},{"n":"하마리큐 정원","d":"M486 207l26 -40l38 35l-38 26l-26 -21z","x":516,"y":185,"a":1938},{"n":"기타노마루 공원","d":"M402 -148l13 15l15 5l8 13l2 5l-12 6l5 8l-13 -4l-15 6l1 -6l-14 -7l-3 -8l4 -6l-1 -20l10 -7z","x":412,"y":-125,"a":1581},{"n":"이노카시라 공원","d":"M-1052 -193l48 -22l4 -7l0 7l27 27l37 16l3 15l-17 -19l-72 -19l-10 5l-4 15l-16 -18z","x":-987,"y":-189,"a":1504},{"n":"히비야 공원","d":"M455 36l26 15l-26 39l-23 -11l23 -43z","x":456,"y":65,"a":1330},{"n":"오다이바 해변공원","d":"M579 515l-1 1l1 -1zM613 449l25 39l-75 53l-2 -8l18 -16l22 -11l-1 -5l27 -18l-16 -29l-4 -2l-12 8l-6 -5l5 1l28 -18l2 2l-11 9z","x":619,"y":495,"a":1169},{"n":"도요스 구루리 공원","d":"M740 280l-67 53l-50 45l14 18l0 -5l9 -5l0 17l6 -1l115 -76l3 -10l-16 -18l2 -5l8 -5l6 8l-7 -4l-7 5l16 20l-3 10l-118 79l-11 0l-22 -30l85 -71l37 -25z","x":647,"y":354,"a":1099},{"n":"아리아케 해변공원","d":"M780 368l16 -11l-18 16l-11 -18l-12 8l-9 6l4 6l-29 19l-4 -6l-4 3l4 6l-40 32l-1 6l-14 -21l9 11l13 -9l1 -11l82 -54l13 17z","x":710,"y":392,"a":1081},{"n":"시바 공원","d":"M369 253l34 9l0 6l-18 -2l-16 -13zM408 252l-1 3l7 2l-8 2l2 -7zM408 239l1 10l-1 0l0 -10zM402 201l-2 -8l9 1l1 -6l5 2l-4 13l-9 -2z","x":407,"y":198,"a":369}]};
+const CATS = [["쇼핑","--c-shop"],["식당","--c-food"],["카페·디저트","--c-cafe"],["술집","--c-bar"],["숙소","--c-stay"],["관광·문화","--c-sight"]];
+const CVAR = Object.fromEntries(CATS);
+// 카테고리 안의 세부 종류: 전체 개수 순, 기타는 맨 뒤. 음식 쪽 카테고리는 종류별로 핀 색을 바꾼다.
+const TYPES = {};
+CATS.forEach(([c])=>{ const n={}; PLACES.filter(p=>p.c===c).forEach(p=>n[p.s]=(n[p.s]||0)+1);
+  TYPES[c]=Object.keys(n).sort((a,b)=>(a==="기타")-(b==="기타")||n[b]-n[a]); });
+const TYPED = new Set(["식당","카페·디저트","술집"]);
+const typeVar=(c,s)=>{ const i=TYPES[c].filter(t=>t!=="기타").indexOf(s); return s!=="기타"&&i>=0&&i<7?`--t${i}`:"--t-etc"; };
+const typed=()=>TYPED.has(S.cat);
+const pinVar=p=>typed()&&p.c===S.cat?typeVar(p.c,p.s):CVAR[p.c];
+const typeLabel=p=>p.t&&p.t!==p.s?`${p.s} · ${p.t}`:p.s;
+const YAMANOTE = [["도쿄",35.6812,139.7671],["간다",35.6918,139.7709],["아키하바라",35.6984,139.7731],["오카치마치",35.7075,139.7748],["우에노",35.7138,139.7773],["닛포리",35.7278,139.7708],["다바타",35.7381,139.7608],["고마고메",35.7365,139.7470],["스가모",35.7334,139.7393],["오쓰카",35.7318,139.7286],["이케부쿠로",35.7295,139.7109],["메지로",35.7212,139.7066],["다카다노바바",35.7128,139.7038],["신오쿠보",35.7012,139.7000],["신주쿠",35.6896,139.7006],["요요기",35.6830,139.7020],["하라주쿠",35.6702,139.7027],["시부야",35.6580,139.7016],["에비스",35.6467,139.7101],["메구로",35.6339,139.7157],["고탄다",35.6262,139.7236],["오사키",35.6197,139.7286],["시나가와",35.6285,139.7387],["다카나와게이트웨이",35.6355,139.7407],["다마치",35.6457,139.7476],["하마마쓰초",35.6555,139.7570],["신바시",35.6663,139.7583],["유라쿠초",35.6750,139.7630]];
+const CHUO = [["도쿄",35.6812,139.7671],["간다",35.6918,139.7709],["오차노미즈",35.6995,139.7651],["스이도바시",35.7020,139.7535],["이이다바시",35.7020,139.7450],["이치가야",35.6912,139.7356],["요쓰야",35.6860,139.7302],["시나노마치",35.6801,139.7202],["센다가야",35.6812,139.7114],["요요기",35.6830,139.7020],["신주쿠",35.6896,139.7006],["오쿠보",35.7010,139.6974],["히가시나카노",35.7064,139.6834],["나카노",35.7056,139.6658],["고엔지",35.7053,139.6497],["아사가야",35.7048,139.6357],["오기쿠보",35.7046,139.6200],["니시오기쿠보",35.7037,139.5995],["기치조지",35.7030,139.5797]];
+const MAJOR = new Set(["도쿄","우에노","이케부쿠로","신주쿠","시부야","시나가와","아키하바라","하라주쿠","에비스","신바시","유라쿠초","나카노","기치조지","요쓰야","메구로","오차노미즈"]);
+const AREAS = [
+  ["시부야",35.6598,139.7010,.9],["하라주쿠·오모테산도",35.6690,139.7080,.9],["다이칸야마·나카메구로",35.6465,139.6990,.9],
+  ["신주쿠",35.6915,139.7025,1.0],["긴자",35.6717,139.7650,.8],["니혼바시·도쿄역",35.6830,139.7725,.9],
+  ["아사쿠사·우에노",35.7110,139.7860,1.3],["도요스·오다이바",35.6380,139.7850,1.4],["기치조지",35.7030,139.5797,.9]
+];
+
+/* ---------- 이 기기에 저장 ---------- */
+function load(k, d){ try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch(e){ return d; } }
+function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+let marks = load("tokyo-marks", {}); if (typeof marks!=="object"||!marks) marks={};
+let C = load("tokyo-course", null);
+if (!C || !Array.isArray(C.days) || !C.days.length) C = {days:[{name:"1일차", ids:[]}], cur:0, mode:"walking"};
+const mk = cid => marks[cid] || {};
+const saveMarks = () => save("tokyo-marks", marks);
+const saveCourse = () => save("tokyo-course", C);
+const day = () => C.days[Math.min(C.cur, C.days.length-1)];
+
+/* ---------- 공통 ---------- */
+const S = { cat:"전체", subs:new Set(), ward:"전체", q:"", only:"all", sort:"ward", sel:null, tab:"list" };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const byId = Object.fromEntries(PLACES.map(p=>[p.cid,p]));
+const gmap = p => `https://www.google.com/maps?cid=${p.cid}`;
+const gdir = (p, mode="transit") => `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=${mode}`;
+const gleg = (a,b) => `https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lng}&destination=${b.lat},${b.lng}&travelmode=transit`;
+function km(a,b){ const R=6371, t=Math.PI/180, dLa=(b.lat-a.lat)*t, dLo=(b.lng-a.lng)*t;
+  const h=Math.sin(dLa/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+const walkMin = d => Math.max(1, Math.round(d*1.3/4.5*60));
+const fmtKm = d => d < 1 ? `${Math.round(d*1000)}m` : `${d.toFixed(1)}km`;
+const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}시간 ${m%60}분` : `${m}분`;
+
+function matches(p, ignore){
+  if (ignore!=="cat" && S.cat!=="전체" && p.c!==S.cat) return false;
+  if (ignore!=="cat" && S.subs.size && !S.subs.has(p.s)) return false;
+  if (S.ward!=="전체" && p.h!==S.ward) return false;
+  const m = mk(p.cid);
+  if (S.only==="fav" && !m.f) return false;
+  if (S.only==="todo" && m.v) return false;
+  if (S.only==="visited" && !m.v) return false;
+  if (S.q){ const q=S.q.toLowerCase(); if (!(`${p.n} ${p.h} ${p.d} ${p.s} ${p.t||""} ${p.c} ${p.src}`.toLowerCase().includes(q))) return false; }
+  return true;
+}
+
+/* ---------- 필터 ---------- */
+const OTHER="그 밖의 지역", hood=p=>p.h===OTHER?p.d:p.h;
+const wards = [...new Set(PLACES.map(p=>p.h))].sort((a,b)=>(a===OTHER)-(b===OTHER)||PLACES.filter(p=>p.h===b).length-PLACES.filter(p=>p.h===a).length);
+$("ward").innerHTML = `<option value="전체">모든 지역</option>` + wards.map(w=>`<option value="${esc(w)}">${esc(w)} (${PLACES.filter(p=>p.h===w).length})</option>`).join("");
+function renderChips(){
+  const base = PLACES.filter(p=>matches(p,"cat"));
+  const cnt = c => base.filter(p=>p.c===c).length;
+  $("cats").innerHTML = `<button class="chip" data-cat="전체" aria-pressed="${S.cat==="전체"}">전체 <span class="n">${base.length}</span></button>` +
+    CATS.map(([c,v])=>`<button class="chip" data-cat="${c}" style="--c:var(${v})" aria-pressed="${S.cat===c}"><span class="dot"></span>${c} <span class="n">${cnt(c)}</span></button>`).join("");
+  const el = $("subs");
+  if (S.cat==="전체"){ el.hidden = true; return; }
+  const inCat = base.filter(p=>p.c===S.cat);
+  const subs = TYPES[S.cat];
+  el.hidden = subs.length<2;
+  el.innerHTML = `<button class="chip" data-sub="전체" aria-pressed="${S.subs.size===0}">${S.cat} 전체</button>` +
+    subs.map(s=>`<button class="chip" data-sub="${esc(s)}" aria-pressed="${S.subs.has(s)}"${typed()?` style="--c:var(${typeVar(S.cat,s)})"><span class="dot"></span>`:">"}${esc(s)} <span class="n">${inCat.filter(p=>p.s===s).length}</span></button>`).join("");
+}
+$("cats").addEventListener("click", e=>{ const b=e.target.closest("[data-cat]"); if(!b) return; S.cat=b.dataset.cat; S.subs=new Set(); update(); });
+$("subs").addEventListener("click", e=>{ const b=e.target.closest("[data-sub]"); if(!b) return; const v=b.dataset.sub; if(v==="전체") S.subs.clear(); else if(S.subs.has(v)) S.subs.delete(v); else S.subs.add(v); update(); });
+$("ward").addEventListener("change", e=>{ S.ward=e.target.value; update(true); });
+$("q").addEventListener("input", e=>{ S.q=e.target.value.trim(); update(); });
+$("sort").addEventListener("change", e=>{ S.sort=e.target.value; renderList(); });
+document.querySelector(".seg").addEventListener("click", e=>{
+  const b=e.target.closest("[data-only]"); if(!b) return; S.only=b.dataset.only;
+  document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed", x===b)); update();
+});
+function renderStats(){ if(!$("stats")) return;
+  const fav = PLACES.filter(p=>mk(p.cid).f).length, vis = PLACES.filter(p=>mk(p.cid).v).length;
+  const inCourse = new Set(C.days.flatMap(d=>d.ids)).size;
+  $("stats").innerHTML = `<div class="stat"><b>${PLACES.length}</b><span>저장 장소</span></div>
+    <div class="stat"><b>${fav}</b><span>꼭 가기</span></div><div class="stat"><b>${inCourse}</b><span>코스에 담음</span></div>
+    <div class="stat"><b>${vis}</b><span>다녀옴</span></div>`;
+}
+
+/* ---------- 탭 ---------- */
+function setTab(t, quiet){ S.tab=t;
+  ["rec","list","course"].forEach(k=>{ $("tab-"+k).setAttribute("aria-selected", t===k); $("pane-"+k).hidden = t!==k; });
+  if(t==="course") renderCourse(); if(t==="list") renderList(); if(t==="rec") renderRec();
+  drawBase(); if(!quiet){ apply(); if(isMobile() && sheetState==="min") setSheet("mid"); } }
+["rec","list","course"].forEach(k=>$("tab-"+k).onclick=()=>setTab(k));
+
+/* ---------- 목록 ---------- */
+const ICON_STAR = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const ICON_CHECK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
+const svgI = d => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICON_UP = svgI('<path d="m6 15 6-6 6 6"/>'), ICON_DOWN = svgI('<path d="m6 9 6 6 6-6"/>'), ICON_X = svgI('<path d="M6 6l12 12M18 6 6 18"/>');
+const ICON_STAR_S = `<svg class="st" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const inDay = cid => day().ids.includes(cid);
+const courseBtn = cid => `<button class="btn${inDay(cid)?" on":""}" data-course="${cid}">${inDay(cid)?esc(day().name)+"에 담음":"코스 담기"}</button>`;
+function renderList(){
+  let rows = PLACES.filter(p=>matches(p));
+  const key = {ward:p=>p.h+p.c+p.n, name:p=>p.n, cat:p=>CATS.findIndex(c=>c[0]===p.c)+p.s+p.n}[S.sort];
+  rows.sort((a,b)=>String(key(a)).localeCompare(String(key(b)),"ko"));
+  $("cnt").textContent = rows.length;
+  if (!rows.length){ $("list").innerHTML = `<div class="empty">맞는 곳이 없어요.</div>`; return; }
+  $("list").innerHTML = rows.map(p=>{
+    const m = mk(p.cid);
+    return `<article class="card${m.v?" visited":""}${S.sel===p.cid?" sel":""}" id="c${p.cid}" style="--c:var(${CVAR[p.c]})">
+      <div class="bar"></div>
+      <div class="cmain" data-pick="${p.cid}">
+        <div class="name">${m.f?ICON_STAR_S:""}${esc(p.n)}</div>
+        <div class="meta"><span class="cat">${esc(typeLabel(p))}</span><span>${esc(hood(p))}</span>${inDay(p.cid)?`<span class="inc">${esc(day().name)}</span>`:""}</div>
+      </div>
+      <a class="btn" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a>
+    </article>`;
+  }).join("");
+}
+function toggleCourse(cid){
+  const d=day(), i=d.ids.indexOf(cid);
+  if (i>=0) d.ids.splice(i,1); else d.ids.push(cid);
+  saveCourse(); refreshCourseBits();
+}
+function refreshCourseBits(){ $("cbadge").textContent = day().ids.length; renderStats(); if(S.tab==="list") renderList(); else renderCourse(); renderPeek(); drawRoute(); apply(); }
+document.addEventListener("click", e=>{
+  const f=e.target.closest("[data-fav]"), v=e.target.closest("[data-vis]"), pk=e.target.closest("[data-pick]"), co=e.target.closest("[data-course]");
+  if (co){ toggleCourse(co.dataset.course); return; }
+  if (f||v){ const cid=(f||v).dataset[f?"fav":"vis"], k=f?"f":"v"; marks[cid]={...mk(cid),[k]:!mk(cid)[k]}; saveMarks(); update(); renderPeek(); return; }
+  if (pk){ if(isMobile()) setSheet("min"); select(pk.dataset.pick, true); }
+});
+
+/* ---------- 코스 ---------- */
+function renderDays(){
+  $("days").innerHTML = C.days.map((d,i)=>`<button class="chip" data-day="${i}" aria-pressed="${i===C.cur}">${esc(d.name)} <span class="n">${d.ids.length}</span></button>`).join("")
+    + `<button class="chip" data-day="add">날 추가</button>`;
+}
+$("days").addEventListener("click", e=>{
+  const b=e.target.closest("[data-day]"); if(!b) return;
+  if (b.dataset.day==="add"){ C.days.push({name:`${C.days.length+1}일차`, ids:[]}); C.cur=C.days.length-1; }
+  else C.cur=+b.dataset.day;
+  saveCourse(); refreshCourseBits();
+});
+function routeChunks(stops){
+  // 구글맵 경로 하나에 출발+경유 8곳+도착 = 최대 10곳
+  const out=[]; let i=0;
+  while (i < stops.length-1){ const part = stops.slice(i, i+10); out.push(part); i += part.length-1; }
+  return out;
+}
+function routeUrl(part, mode){
+  const o=part[0], d=part[part.length-1], w=part.slice(1,-1).map(p=>`${p.lat},${p.lng}`).join("|");
+  return `https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lng}&destination=${d.lat},${d.lng}${w?`&waypoints=${encodeURIComponent(w)}`:""}&travelmode=${mode}`;
+}
+function optimize(ids){
+  if (ids.length<3) return ids;
+  const pts=ids.map(id=>byId[id]); const rest=pts.slice(1), path=[pts[0]];
+  while(rest.length){ const last=path[path.length-1]; let bi=0, bd=1e9;
+    rest.forEach((p,i)=>{ const d=km(last,p); if(d<bd){bd=d;bi=i;} }); path.push(rest.splice(bi,1)[0]); }
+  // 2-opt 다듬기 (출발지는 고정)
+  let improved=true, n=path.length, guard=0;
+  while(improved && guard++<50){ improved=false;
+    for(let i=1;i<n-2;i++) for(let j=i+1;j<n-1;j++){
+      const a=path[i-1],b=path[i],c=path[j],d=path[j+1];
+      if (km(a,c)+km(b,d) < km(a,b)+km(c,d)-1e-9){ path.splice(i, j-i+1, ...path.slice(i,j+1).reverse()); improved=true; }
+    } }
+  return path.map(p=>p.cid);
+}
+function renderCourse(){
+  renderDays();
+  const d=day(), stops=d.ids.map(id=>byId[id]).filter(Boolean);
+  if (!stops.length){
+    $("course").innerHTML = `<div class="empty">비어 있어요. 장소를 누른 뒤 <b>코스 담기</b>를 눌러요.</div>`
+      + (C.days.length>1 ? `<div style="margin-top:8px;text-align:right"><button class="btn" id="delday">${esc(d.name)} 지우기</button></div>` : "");
+    const dd=$("delday"); if(dd) dd.onclick=()=>{ C.days.splice(C.cur,1); C.days.forEach((x,i)=>x.name=`${i+1}일차`); C.cur=Math.max(0,C.cur-1); saveCourse(); refreshCourseBits(); };
+    return;
+  }
+  let total=0; const legs=[];
+  for (let i=0;i<stops.length-1;i++){ const k=km(stops[i],stops[i+1]); total+=k; legs.push(k); }
+  const chunks = routeChunks(stops);
+  const modeName = {walking:"도보", driving:"자동차"};
+  $("course").innerHTML = `
+    <div class="csum">
+      <div><div class="big">${stops.length}곳 · ${fmtKm(total)}</div><div class="small">걸어서 약 ${fmtMin(walkMin(total))}</div></div>
+      <div class="cacts">
+        <button class="btn" id="opt" ${stops.length<3?"disabled":""}>가까운 순서로 정렬</button>
+        <button class="btn" id="cfit">지도에서 보기</button>
+        <button class="btn" id="cclear">비우기</button>
+      </div>
+    </div>
+    <div class="stops">${stops.map((p,i)=>`
+      <div class="stop" style="--c:var(${CVAR[p.c]})">
+        <div class="num">${i+1}</div>
+        <div style="min-width:0"><div class="sn" data-pick="${p.cid}">${esc(p.n)}</div><div class="sm"><span style="color:var(--c);font-weight:600">${esc(p.s)}</span> · ${esc(hood(p))}</div></div>
+        <div class="ctl">
+          <button data-mv="${i}:-1" aria-label="위로" ${i===0?"disabled":""}>${ICON_UP}</button>
+          <button data-mv="${i}:1" aria-label="아래로" ${i===stops.length-1?"disabled":""}>${ICON_DOWN}</button>
+          <button data-rm="${p.cid}" aria-label="빼기">${ICON_X}</button>
+        </div>
+      </div>
+      ${i<stops.length-1 ? `<div class="leg">${fmtKm(legs[i])} · 도보 ${fmtMin(walkMin(legs[i]))} <a href="${gleg(p,stops[i+1])}" target="_blank" rel="noopener">대중교통</a></div>` : ""}`).join("")}
+    </div>
+    ${stops.length>1 ? `<div class="routes">
+      <div class="row"><span class="small" style="color:var(--muted);font-size:12px">전체 경로 이동 수단</span>
+        <div class="seg" id="mode">${Object.entries(modeName).map(([k,v])=>`<button data-mode="${k}" aria-pressed="${C.mode===k}">${v}</button>`).join("")}</div></div>
+      ${chunks.map((part,i)=>`<a class="btn primary" style="height:40px" href="${routeUrl(part,C.mode)}" target="_blank" rel="noopener">
+        구글맵에서 ${chunks.length>1?`경로 ${i+1} (${stops.indexOf(part[0])+1}–${stops.indexOf(part[0])+part.length}번)`:"경로"} 열기</a>`).join("")}
+      ${chunks.length>1?`<div class="note">구글맵은 한 번에 10곳까지라 나눠서 열어요.</div>`:""}
+    </div>` : ""}`;
+  $("opt").onclick=()=>{ d.ids=optimize(d.ids); saveCourse(); refreshCourseBits(); };
+  $("cfit").onclick=()=>{ if(isMobile()) setSheet("min"); fit(stops, 70); };
+  $("cclear").onclick=()=>{ d.ids=[]; saveCourse(); refreshCourseBits(); };
+  const m=$("mode"); if(m) m.onclick=e=>{ const b=e.target.closest("[data-mode]"); if(!b) return; C.mode=b.dataset.mode; saveCourse(); renderCourse(); };
+}
+$("course").addEventListener("click", e=>{
+  const mv=e.target.closest("[data-mv]"), rm=e.target.closest("[data-rm]"), d=day();
+  if (mv){ const [i,dir]=mv.dataset.mv.split(":").map(Number); const j=i+dir; [d.ids[i],d.ids[j]]=[d.ids[j],d.ids[i]]; saveCourse(); refreshCourseBits(); }
+  if (rm){ d.ids=d.ids.filter(x=>x!==rm.dataset.rm); saveCourse(); refreshCourseBits(); }
+});
+
+/* ---------- 지도 ---------- */
+const svg=$("map"), NS="http://www.w3.org/2000/svg";
+const LAT0=35.68, LNG0=139.70, KX=Math.cos(LAT0*Math.PI/180);
+const proj=(lat,lng)=>[(lng-LNG0)*KX*10000,(LAT0-lat)*10000];
+PLACES.forEach(p=>{ [p.x,p.y]=proj(p.lat,p.lng); });
+const el=(tag,attrs={},parent)=>{ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; };
+let V={s:1,tx:0,ty:0}, fitS=1;
+const g=el("g",{},svg);
+const L={}; ["land","wards","parks","rivers","rail","wlab","plab","stn","base","route","pts","clu","stopn","lbl","me"].forEach(k=>L[k]=el("g",{},g));
+L.route.style.pointerEvents="none"; L.base.style.pointerEvents="none"; L.me.style.pointerEvents="none"; L.stopn.style.pointerEvents="none"; L.lbl.style.pointerEvents="none"; L.wlab.style.pointerEvents="none"; L.plab.style.pointerEvents="none";
+
+// 바탕
+el("path",{d:BASE.land,fill:"var(--land-out)"},L.land);
+const wardEls = BASE.wards.map(w=>({...w, e:el("path",{d:w.d,fill:"var(--land)",stroke:"var(--ward)","stroke-width":1,"vector-effect":"non-scaling-stroke","stroke-linejoin":"round"},L.wards)}));
+const parkEls = BASE.parks.map(p=>({...p, e:el("path",{d:p.d,fill:"var(--park)"},L.parks)}));
+const riverEls = BASE.rivers.map(r=>({...r, e:el("path",{d:r.d,fill:"none",stroke:"var(--river)","stroke-linecap":"round","stroke-linejoin":"round","vector-effect":"non-scaling-stroke"},L.rivers)}));
+// 노선
+function line(stations, color, closed){
+  const pts=stations.map(([n,a,b])=>proj(a,b)); const d="M"+pts.map(p=>p.map(v=>v.toFixed(1)).join(" ")).join("L")+(closed?"Z":"");
+  return el("path",{d,fill:"none",stroke:color,"stroke-linejoin":"round","stroke-linecap":"round","vector-effect":"non-scaling-stroke"},L.rail);
+}
+const chuoEl=line(CHUO,"var(--chuo)",false), yamaEl=line(YAMANOTE,"var(--rail)",true);
+const stnMap=new Map(); [...YAMANOTE,...CHUO].forEach(([n,a,b])=>{ if(!stnMap.has(n)) stnMap.set(n,proj(a,b)); });
+const stations=[...stnMap].map(([n,[x,y]])=>{
+  const c=el("circle",{fill:"var(--panel)",stroke:"var(--ink)","stroke-width":1.5,"vector-effect":"non-scaling-stroke"},L.stn);
+  const t=el("text",{fill:"var(--ink)","font-family":"var(--f-display)","font-weight":700,"paint-order":"stroke",stroke:"var(--land)","stroke-linejoin":"round"},L.stn);
+  t.textContent=n; return {n,x,y,c,t,major:MAJOR.has(n)};
+});
+const wardLabels=wardEls.map(w=>{ const t=el("text",{fill:"var(--muted)","text-anchor":"middle","font-family":"var(--f-body)","font-weight":600,"letter-spacing":".1em",opacity:.75},L.wlab); t.textContent=w.n; return {...w,t}; });
+const parkLabels=parkEls.map(p=>{ const t=el("text",{fill:"color-mix(in srgb,var(--park) 30%,var(--ink))","text-anchor":"middle","font-family":"var(--f-body)","font-weight":500,opacity:.8},L.plab); t.textContent=p.n; return {...p,t}; });
+// 핀
+PLACES.forEach(p=>{
+  p.el=el("circle",{fill:`var(${CVAR[p.c]})`,stroke:"var(--panel)","stroke-width":1.5,"vector-effect":"non-scaling-stroke"},L.pts);
+  p.el.dataset.cid=p.cid; p.el.style.cursor="pointer";
+});
+const ring=el("circle",{fill:"none",stroke:"var(--ink)","stroke-width":2.5,"vector-effect":"non-scaling-stroke"},L.pts); ring.style.pointerEvents="none";
+
+/* 묶음(클러스터): 월드 좌표 격자로 나눠서, 이동 중엔 바뀌지 않고 확대할 때만 다시 계산 */
+let cluCache={s:null,key:""};
+function clusters(){
+  const vis=PLACES.filter(p=>p.show);
+  const key=vis.map(p=>p.cid).join(",")+"|"+S.sel;
+  if (cluCache.s===V.s && cluCache.key===key) return cluCache.res;
+  const res={single:new Set(), groups:[]};
+  if (V.s >= fitS*3.2){ vis.forEach(p=>res.single.add(p.cid)); }
+  else {
+    const cell=58/V.s, grid=new Map();
+    vis.forEach(p=>{ const k=Math.floor(p.x/cell)+":"+Math.floor(p.y/cell); (grid.get(k)||grid.set(k,[]).get(k)).push(p); });
+    grid.forEach(arr=>{
+      if (arr.length<3 || arr.some(p=>p.cid===S.sel)) arr.forEach(p=>res.single.add(p.cid));
+      else res.groups.push(arr);
+    });
+  }
+  cluCache={s:V.s,key,res}; return res;
+}
+function renderClusters(res){
+  L.clu.innerHTML="";
+  res.groups.forEach(arr=>{
+    const x=arr.reduce((a,p)=>a+p.x,0)/arr.length, y=arr.reduce((a,p)=>a+p.y,0)/arr.length;
+    const vs=new Set(arr.map(pinVar)), col=vs.size===1?`var(${pinVar(arr[0])})`:"var(--ink)";
+    const r=(11+Math.min(10,Math.sqrt(arr.length)*2.2))/V.s;
+    const gg=el("g",{},L.clu); gg.style.cursor="pointer";
+    el("circle",{cx:x,cy:y,r:r+3/V.s,fill:col,opacity:.22},gg);
+    el("circle",{cx:x,cy:y,r,fill:col,stroke:"var(--panel)","stroke-width":2,"vector-effect":"non-scaling-stroke"},gg);
+    const t=el("text",{x,y:y+4/V.s,"text-anchor":"middle",fill:"var(--panel)","font-size":12/V.s,"font-family":"var(--f-mono)","font-weight":500},gg); t.textContent=arr.length;
+    gg.dataset.clu="1"; gg.__members=arr;
+  });
+}
+// 코스 선
+let routeLine=null;
+function drawRoute(){
+  L.route.innerHTML=""; L.stopn.innerHTML="";
+  const stops=day().ids.map(id=>byId[id]).filter(Boolean);
+  if (stops.length>1){
+    routeLine=el("path",{d:"M"+stops.map(p=>`${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join("L"),fill:"none",stroke:"var(--route)","stroke-linejoin":"round","stroke-linecap":"round","vector-effect":"non-scaling-stroke","stroke-dasharray":"7 5"},L.route);
+  }
+  stops.forEach((p,i)=>{ const gg=el("g",{},L.stopn); gg.__p=p; gg.__i=i;
+    el("circle",{fill:"var(--route)",stroke:"var(--panel)","stroke-width":2,"vector-effect":"non-scaling-stroke"},gg);
+    const t=el("text",{"text-anchor":"middle",fill:"var(--route-ink)","font-family":"var(--f-mono)","font-weight":500},gg); t.textContent=i+1; });
+}
+// 이름표
+const labelEls=new Map();
+function labelFor(p){ let t=labelEls.get(p.cid); if(!t){ t=el("text",{"font-family":"var(--f-display)","font-weight":700,fill:"var(--ink)","paint-order":"stroke",stroke:"var(--land)","stroke-linejoin":"round"},L.lbl); t.textContent=p.n.length>18?p.n.slice(0,17)+"…":p.n; labelEls.set(p.cid,t);} return t; }
+
+function size(){ const r=svg.getBoundingClientRect(); return [r.width||600, r.height||500]; }
+function apply(){
+  recFollow();
+  g.setAttribute("transform",`translate(${V.tx},${V.ty}) scale(${V.s})`);
+  const z=V.s/fitS, inv=1/V.s;
+  // 바탕 선 굵기
+  riverEls.forEach(r=>r.e.setAttribute("stroke-width", (r.w? Math.min(9,2.5+z*1.2) : Math.min(5,1.2+z*.6))));
+  yamaEl.setAttribute("stroke-width",Math.min(7,3+z*.5)); chuoEl.setAttribute("stroke-width",Math.min(6,2.4+z*.45));
+    const showStn=n=>z>=2.2 || n.major, showWard=z<6;
+  stations.forEach(s=>{ const on=showStn(s); s.c.style.display=s.t.style.display=on?"":"none"; if(!on) return;
+    s.c.setAttribute("cx",s.x); s.c.setAttribute("cy",s.y); s.c.setAttribute("r",(s.major?3.6:2.8)*inv);
+    s.t.setAttribute("x",s.x+6*inv); s.t.setAttribute("y",s.y-5*inv); s.t.setAttribute("font-size",(s.major?11.5:10)*inv); s.t.setAttribute("stroke-width",3*inv); });
+  wardLabels.forEach(w=>{ w.t.style.display=showWard?"":"none"; w.t.setAttribute("x",w.x); w.t.setAttribute("y",w.y); w.t.setAttribute("font-size",(z<1.6?10:12)*inv); });
+  parkLabels.forEach((p,i)=>{ const on = z>=2.5 || (z>=1.4 && i<4); p.t.style.display=on?"":"none"; p.t.setAttribute("x",p.x); p.t.setAttribute("y",p.y); p.t.setAttribute("font-size",10*inv); });
+  // 핀과 묶음
+  const res=clusters(); renderClusters(res);
+  const rs=Math.min(1.5,.75+z*.12);
+  PLACES.forEach(p=>{ const on=p.show && res.single.has(p.cid); p.el.style.display=on?"":"none"; if(!on) return;
+    p.el.setAttribute("cx",p.x); p.el.setAttribute("cy",p.y); p.el.setAttribute("r",(S.sel===p.cid?8:5.5)*rs*inv); });
+  const sp=S.sel&&byId[S.sel];
+  if (sp && sp.show){ ring.style.display=""; ring.setAttribute("cx",sp.x); ring.setAttribute("cy",sp.y); ring.setAttribute("r",13*rs*inv); } else ring.style.display="none";
+  // 코스
+  if (routeLine) routeLine.setAttribute("stroke-width", Math.min(6,3+z*.3));
+  [...L.stopn.children].forEach(gg=>{ const p=gg.__p, [c,t]=gg.children; c.setAttribute("cx",p.x); c.setAttribute("cy",p.y); c.setAttribute("r",9*inv);
+    t.setAttribute("x",p.x); t.setAttribute("y",p.y+4*inv); t.setAttribute("font-size",11*inv); });
+  if (baseDot) baseDot.setAttribute("r",6*inv);
+  if (meDot){ meDot[0].setAttribute("r",14*inv); meDot[1].setAttribute("r",6*inv); }
+  // 이름표: 충분히 확대했을 때 화면 안의 핀만
+  const [w,h]=size(), showLbl = z>=3.2;
+  const inView=p=>{ const sx=p.x*V.s+V.tx, sy=p.y*V.s+V.ty; return sx>-40&&sx<w+40&&sy>-20&&sy<h+20; };
+  const cand = showLbl ? PLACES.filter(p=>p.show && res.single.has(p.cid) && inView(p)) : [];
+  // 겹치지 않게 배치: 선택한 곳 → 코스 → ★ → 나머지 순서로 자리를 차지
+  const course=new Set(day().ids), rank=p=>p.cid===S.sel?0:course.has(p.cid)?1:mk(p.cid).f?2:3;
+  cand.sort((a,b)=>rank(a)-rank(b));
+  const boxes=[], allow=new Set();
+  const textW=(s,fs)=>[...s].reduce((a,ch)=>a+(ch.charCodeAt(0)<256?.58:1)*fs,0);
+  cand.forEach(p=>{
+    const fs=p.cid===S.sel?12.5:11, label=p.n.length>18?p.n.slice(0,17)+"…":p.n;
+    const sx=p.x*V.s+V.tx+8, sy=p.y*V.s+V.ty-fs*.75, bw=textW(label,fs), bh=fs*1.2;
+    if (rank(p)>0 && boxes.some(b=>sx<b[0]+b[2]+2 && sx+bw+2>b[0] && sy<b[1]+b[3] && sy+bh>b[1])) return;
+    boxes.push([sx,sy,bw,bh]); allow.add(p.cid);
+  });
+  labelEls.forEach((t,cid)=>{ if(!allow.has(cid)) t.style.display="none"; });
+  allow.forEach(cid=>{ const p=byId[cid]; const t=labelFor(p); t.style.display="";
+    t.setAttribute("x",p.x+8*inv); t.setAttribute("y",p.y+4*inv); t.setAttribute("font-size",(cid===S.sel?12.5:11)*inv); t.setAttribute("stroke-width",3.2*inv); });
+}
+function fit(list, pad=46){
+  const ps=(list&&list.length)?list:PLACES;
+  const x0=Math.min(...ps.map(p=>p.x)), x1=Math.max(...ps.map(p=>p.x)), y0=Math.min(...ps.map(p=>p.y)), y1=Math.max(...ps.map(p=>p.y));
+  const [w,h]=size(), {t:top,b:bot}=insets();
+  const s=Math.min(fitS*14||14, Math.min(Math.max(60,w-pad*2)/Math.max(x1-x0,30), Math.max(60,h-pad*2-top-bot)/Math.max(y1-y0,30)));
+  if (ps===PLACES) fitS=s;
+  V={s, tx:w/2-(x0+x1)/2*s, ty:(top+h-bot)/2-(y0+y1)/2*s}; apply();
+}
+// 지도 위에 덮인 부분(폰: 위 검색줄, 아래 시트)을 빼고 남은 영역의 가운데로 맞춘다
+function insets(){ if(!isMobile()) return {t:48,b:0};
+  const cs=getComputedStyle(document.documentElement);
+  // 시트를 끝까지 올린 상태에서도 지도 계산이 뒤집히지 않게 아래 가림은 화면 절반까지만 친다
+  return {t:(parseFloat(cs.getPropertyValue("--top-h"))||110)+6, b:Math.min(parseFloat(cs.getPropertyValue("--sheet-vis"))||0, size()[1]*.5)}; }
+function flyTo(x,y,s){ const [w,h]=size(), {t,b}=insets(); V={s, tx:w/2-x*s, ty:(t+h-b)/2-y*s}; apply(); }
+function areaScale(rk){ const [w,h]=size(), {t,b}=insets(); return Math.max(60,Math.min(w,h-t-b))/(rk*2*1000/11.1); } // 월드 단위 ≈ 11.1m
+function viewCenter(){ const [w,h]=size(), {t,b}=insets(); const x=(w/2-V.tx)/V.s, y=((t+h-b)/2-V.ty)/V.s;
+  return {lat:LAT0-y/10000, lng:LNG0+x/(KX*10000)}; }
+function zoomAt(f,cx,cy){ const s=Math.max(fitS*.6,Math.min(fitS*40,V.s*f)); f=s/V.s; V.tx=cx-(cx-V.tx)*f; V.ty=cy-(cy-V.ty)*f; V.s=s; apply(); }
+$("zin").onclick=()=>{const [w,h]=size(); zoomAt(1.6,w/2,h/2)};
+$("zout").onclick=()=>{const [w,h]=size(); zoomAt(1/1.6,w/2,h/2)};
+$("zfit").onclick=()=>fit(PLACES.filter(p=>p.show));
+svg.addEventListener("wheel",e=>{ e.preventDefault(); const r=svg.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY*.0018),e.clientX-r.left,e.clientY-r.top); },{passive:false});
+// 동네 바로가기
+$("areas").innerHTML = AREAS.map(([n],i)=>`<button data-area="${i}">${n}</button>`).join("");
+$("areas").addEventListener("click",e=>{ const b=e.target.closest("[data-area]"); if(!b) return;
+  const [n,lat,lng,rk]=AREAS[+b.dataset.area]; const [x,y]=proj(lat,lng); flyTo(x,y,areaScale(rk)); });
+
+// 드래그·핀치
+const ptrs=new Map(); let moved=0, pinch=null, downT=null;
+svg.addEventListener("pointerdown",e=>{ svg.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=0; downT=e.target; svg.classList.add("drag");
+  if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; pinch={d:Math.hypot(a.x-b.x,a.y-b.y)}; } });
+svg.addEventListener("pointermove",e=>{
+  const p=ptrs.get(e.pointerId); if(!p){ hover(e); return; }
+  const dx=e.clientX-p.x, dy=e.clientY-p.y; moved+=Math.abs(dx)+Math.abs(dy);
+  if(ptrs.size===2&&pinch){ ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y);
+    const r=svg.getBoundingClientRect(); zoomAt(d/pinch.d,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top); pinch.d=d; return; }
+  V.tx+=dx; V.ty+=dy; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  g.setAttribute("transform",`translate(${V.tx},${V.ty}) scale(${V.s})`);
+  if (!pendingApply){ pendingApply=true; requestAnimationFrame(()=>{ pendingApply=false; apply(); }); }
+});
+let pendingApply=false;
+function up(e){ const had=ptrs.has(e.pointerId); ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null; if(!ptrs.size) svg.classList.remove("drag");
+  if(!(had && moved<6 && e.type==="pointerup")) return;
+  const t=downT; const cg=t&&t.closest&&t.closest("[data-clu]");
+  if (cg){ const arr=cg.__members; const r=svg.getBoundingClientRect();
+    const x=arr.reduce((a,p)=>a+p.x,0)/arr.length, y=arr.reduce((a,p)=>a+p.y,0)/arr.length; const [w,h]=size();
+    const xs=arr.map(p=>p.x), ys=arr.map(p=>p.y), span=Math.max(Math.max(...xs)-Math.min(...xs), Math.max(...ys)-Math.min(...ys), 20);
+    flyTo(x,y,Math.max(V.s*2.2, Math.min(fitS*12,(Math.min(w,h)-120)/span))); return; }
+  const cid=t&&t.dataset&&t.dataset.cid; if(cid){ select(cid,false); return; }
+  if (S.sel){ S.sel=null; renderPeek(); if(S.tab==="list") renderList(); cluCache.s=null; apply(); }
+}
+svg.addEventListener("pointerup",up); svg.addEventListener("pointercancel",up);
+svg.addEventListener("pointerleave",()=>{$("tip").style.display="none"});
+function hover(e){
+  const cid=e.target.dataset&&e.target.dataset.cid, tip=$("tip");
+  if(!cid || V.s>=fitS*3.2){ tip.style.display="none"; return; }
+  const p=byId[cid], r=svg.getBoundingClientRect();
+  tip.textContent=`${p.n} · ${typeLabel(p)}`; tip.style.left=(e.clientX-r.left)+"px"; tip.style.top=(e.clientY-r.top)+"px"; tip.style.display="block";
+}
+function renderPeek(){
+  const pk=$("peek"), p=S.sel&&byId[S.sel];
+  $("legend").hidden=!!p; pk.hidden=!p; if(!p) return;
+  pk.style.setProperty("--c",`var(${CVAR[p.c]})`);
+  pk.innerHTML=`<button class="x" id="pkx" aria-label="닫기">×</button>
+    <div style="min-width:0"><div class="meta"><span class="cat">${esc(p.c)}</span><span>${esc(typeLabel(p))}</span><span>·</span><span>${esc(hood(p))}</span></div><div class="pn">${esc(p.n)}</div></div>
+    <div class="pa">
+      <button class="ic fav" data-fav="${p.cid}" aria-pressed="${!!mk(p.cid).f}" aria-label="꼭 가기" title="꼭 가기">${ICON_STAR}</button>
+      <button class="ic vis" data-vis="${p.cid}" aria-pressed="${!!mk(p.cid).v}" aria-label="다녀옴" title="다녀옴">${ICON_CHECK}</button>
+      ${courseBtn(p.cid)}<a class="btn" href="${gdir(p)}" target="_blank" rel="noopener">길찾기</a><a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div>`;
+  $("pkx").onclick=()=>{ S.sel=null; renderPeek(); if(S.tab==="list") renderList(); cluCache.s=null; apply(); };
+}
+function select(cid, center){
+  S.sel=cid; cluCache.s=null;
+  if (S.tab==="list") renderList(); renderPeek();
+  const p=byId[cid];
+  if (center) flyTo(p.x,p.y,Math.max(V.s,fitS*4)); else apply();
+  const card=$("c"+cid); if(card && !center && !isMobile()) card.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function renderLegend(){
+  const items = typed() ? TYPES[S.cat].map(t=>[t,typeVar(S.cat,t)]) : CATS;
+  $("legend").innerHTML = items.map(([c,v])=>`<span><i style="background:var(${v})"></i>${esc(c)}</span>`).join("")
+    + `<span><span class="ln" style="background:var(--rail)"></span>야마노테선</span><span><span class="ln" style="background:var(--chuo)"></span>주오선</span>`
+    + `<span><span class="ln" style="background:var(--route)"></span>내 코스</span>`;
+}
+
+/* ---------- 주변 추천 ---------- */
+const ICON_LOC = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
+const R = { base:null, key:"view" }; // view = 지금 지도 화면을 따라감, me = 내 위치 기준, h0.. = 동네 하나
+// 지역 필터와 같은 동네 (가운데 좌표는 동네 나눌 때 쓴 값)
+const HOODS = [["하라주쿠·오모테산도",35.6690,139.7080],["시부야",35.6598,139.7010],["긴자·유라쿠초",35.6717,139.7640],["아사쿠사",35.7120,139.7960],
+  ["츠키지",35.6655,139.7705],["에비스·나카메구로",35.6460,139.7020],["신주쿠",35.6915,139.7025],["아키하바라",35.6984,139.7731],["도요스·오다이바",35.6500,139.7900],
+  ["롯폰기·아자부",35.6600,139.7300],["니혼바시·도쿄역",35.6830,139.7725],["시모키타자와",35.6615,139.6680],["우에노",35.7110,139.7760],["기치조지",35.7030,139.5797]];
+// 지도를 옮기거나 확대하면 잠깐 뒤 추천을 다시 고른다
+function recFollow(){ clearTimeout(window.__recT); window.__recT=setTimeout(()=>{ if(S.tab==="rec" && R.key==="view") renderRec(); }, 180); }
+// 위 검색줄과 아래 시트에 가리지 않고 화면에 보이는가
+function onScreen(p){ const [w,h]=size(), {t,b}=insets(), sx=p.x*V.s+V.tx, sy=p.y*V.s+V.ty; return sx>=0 && sx<=w && sy>=t && sy<=h-b; }
+const RADIUS = 2; // km
+const REC_N = {"식당":3,"카페·디저트":3,"술집":2,"쇼핑":4};
+const REC_NAME = {"식당":"밥","카페·디저트":"카페·디저트","술집":"한잔","쇼핑":"쇼핑"};
+const tokyoHour = () => +new Intl.DateTimeFormat("en-US",{hour:"numeric",hourCycle:"h23",timeZone:"Asia/Tokyo"}).format(new Date());
+const tokyoTime = () => new Intl.DateTimeFormat("ko-KR",{hour:"2-digit",minute:"2-digit",hourCycle:"h23",timeZone:"Asia/Tokyo"}).format(new Date());
+// 도쿄 시간대에 맞춰 어떤 분류를 먼저 보여줄지
+function recOrder(h){
+  if (h>=6 && h<11)  return ["카페·디저트","식당","쇼핑","술집"];
+  if (h>=11 && h<15) return ["식당","카페·디저트","쇼핑","술집"];
+  if (h>=15 && h<17) return ["카페·디저트","쇼핑","식당","술집"];
+  if (h>=17 && h<22) return ["식당","술집","쇼핑","카페·디저트"];
+  return ["술집","식당","카페·디저트","쇼핑"];
+}
+// 가까운 순으로 고르되 ★는 앞당기고, 같은 종류가 겹치면 뒤로 미룬다
+function pickNear(cat, base){
+  const k = R.key, inArea = p => k==="view" ? onScreen(p) : k==="me" ? true : p.h===base.label;
+  const cand = PLACES.filter(p=>p.show && p.c===cat && !mk(p.cid).v && inArea(p)).map(p=>({p, d:km(base,p)})).filter(o=>k!=="me" || o.d<=RADIUS);
+  const out=[], used=new Map();
+  while (out.length<REC_N[cat] && cand.length){
+    let bi=0, bs=1e9;
+    cand.forEach((o,i)=>{ const sc=o.d-(mk(o.p.cid).f?.5:0)+(used.get(o.p.s)||0)*.6; if(sc<bs){bs=sc;bi=i;} });
+    const o=cand.splice(bi,1)[0]; out.push(o); used.set(o.p.s,(used.get(o.p.s)||0)+1);
+  }
+  return out;
+}
+let recSecs=[];
+function renderRec(){
+  $("recbase").innerHTML = `<button class="chip" data-rb="me" aria-pressed="${R.key==="me"}">${ICON_LOC}내 위치</button>`
+    + `<button class="chip" data-rb="view" aria-pressed="${R.key==="view"}">지도 화면</button>`
+    + HOODS.map(([n],i)=>`<button class="chip" data-rb="h${i}" aria-pressed="${R.key==="h"+i}">${n}</button>`).join("");
+  if (R.key==="view") R.base={...viewCenter(), label:"지도 화면"};
+  if (!R.base){ recSecs=[]; $("rec").innerHTML = `<div class="empty">동네를 고르면 근처에 저장한 곳을 보여줘요.</div>`; return; }
+  const h=tokyoHour();
+  recSecs = recOrder(h).filter(c=>S.cat==="전체" || c===S.cat).map(c=>[c, pickNear(c, R.base)]);
+  const n = recSecs.reduce((a,[,arr])=>a+arr.length,0);
+  $("rec").innerHTML = `<div class="rtop"><div><div class="big">${R.key==="view"?`화면 안에서 ${n}곳`:R.key==="me"?`내 위치 근처 ${n}곳`:`${esc(R.base.label)}에서 ${n}곳`}</div>
+      <div class="small">도쿄 ${tokyoTime()} · ${R.key==="view"?"화면 가운데에서 가까운 순":R.key==="me"?`${RADIUS}km 안`:"동네 가운데에서 가까운 순"}</div></div>
+      <button class="btn" id="recadd" ${n<2?"disabled":""}>코스로 담기</button></div>`
+    + recSecs.map(([c,arr])=>`<div class="rech"><h3 style="--c:var(${CVAR[c]})"><span class="dot"></span>${REC_NAME[c]}</h3><span>${arr.length?"":(R.key==="view"?"화면 안에 없음":R.key==="me"?"근처에 저장한 곳 없음":"이 동네엔 없음")}</span></div>`
+      + arr.map(({p,d})=>`<div class="ritem" style="--c:var(${CVAR[p.c]})"><div class="bar"></div>
+          <div style="min-width:0"><div class="rn" data-pick="${p.cid}">${mk(p.cid).f?ICON_STAR_S:""}${esc(p.n)}</div>
+            <div class="rm">${esc(typeLabel(p))} · ${fmtKm(d)} · 걸어서 ${fmtMin(walkMin(d))}</div></div>
+          <div class="ra">${courseBtn(p.cid)}<a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`).join("")).join("");
+  const ra=$("recadd"); if(ra) ra.onclick=()=>{
+    // 시간대 순서대로 분류마다 1곳씩(쇼핑은 2곳), 술집은 저녁 이후에만
+    const night = h>=17 || h<4, d=day();
+    recSecs.forEach(([c,arr])=>{ if(c==="술집" && !night) return; arr.slice(0, c==="쇼핑"?2:1).forEach(({p})=>{ if(!d.ids.includes(p.cid)) d.ids.push(p.cid); }); });
+    saveCourse(); refreshCourseBits(); setTab("course");
+  };
+}
+function focusRec(){
+  if (!R.base) return; const [x,y]=proj(R.base.lat,R.base.lng);
+  const pts=[{x,y}, ...recSecs.flatMap(([,a])=>a.map(o=>o.p))];
+  if (pts.length>1) fit(pts, 40); else flyTo(x,y,areaScale(1));
+}
+let baseDot=null;
+function drawBase(){
+  L.base.innerHTML=""; baseDot=null;
+  if (S.tab!=="rec" || !R.base || R.key!=="me") return;
+  const [x,y]=proj(R.base.lat,R.base.lng);
+  el("circle",{cx:x,cy:y,r:RADIUS*1000/11.1,fill:"var(--accent)","fill-opacity":.06,stroke:"var(--accent)","stroke-width":1.5,"stroke-dasharray":"6 5","vector-effect":"non-scaling-stroke"},L.base);
+  baseDot=el("circle",{cx:x,cy:y,fill:"var(--accent)",stroke:"var(--panel)","stroke-width":2,"vector-effect":"non-scaling-stroke"},L.base);
+}
+$("recbase").addEventListener("click", e=>{
+  const b=e.target.closest("[data-rb]"); if(!b) return; const k=b.dataset.rb;
+  if (k==="me"){ locate(true); return; }
+  if(isMobile() && sheetState==="max") setSheet("mid");
+  // 지도 화면: 지도를 따라감 / 동네 버튼: 그 동네 가게만 고르고 지도를 거기로 맞춤
+  if (k==="view"){ R.key="view"; renderRec(); drawBase(); return; }
+  const [n,lat,lng]=HOODS[+k.slice(1)]; R.base={lat,lng,label:n}; R.key=k;
+  renderRec(); drawBase(); focusRec();
+});
+// 내 위치
+let ME=null, meDot=null, toastT;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, 3200); }
+function drawMe(){
+  L.me.innerHTML=""; meDot=null; if(!ME) return; const [x,y]=proj(ME.lat,ME.lng);
+  meDot=[el("circle",{cx:x,cy:y,fill:"#2f7cf6","fill-opacity":.18},L.me), el("circle",{cx:x,cy:y,fill:"#2f7cf6",stroke:"#fff","stroke-width":2.5,"vector-effect":"non-scaling-stroke"},L.me)];
+}
+function locate(forRec){
+  if (!navigator.geolocation){ toast("이 브라우저에서는 위치를 쓸 수 없어요"); return; }
+  const zb=$("zme"); zb.classList.add("busy");
+  navigator.geolocation.getCurrentPosition(pos=>{
+    zb.classList.remove("busy");
+    ME={lat:pos.coords.latitude, lng:pos.coords.longitude};
+    if (km(ME,{lat:35.68,lng:139.73})>40){ ME=null; drawMe(); toast("지금은 도쿄 밖이에요. 동네를 골라 보세요"); return; }
+    drawMe();
+    if (forRec || S.tab==="rec"){ R.base={...ME, label:"내 위치"}; R.key="me"; if(S.tab!=="rec") setTab("rec"); renderRec(); drawBase(); focusRec(); }
+    else { const [x,y]=proj(ME.lat,ME.lng); flyTo(x,y,Math.max(V.s,areaScale(1))); }
+  }, err=>{ zb.classList.remove("busy"); toast(err.code===1?"위치 권한이 꺼져 있어요. 브라우저 설정에서 켜 주세요":"위치를 가져오지 못했어요"); },
+  {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
+}
+$("zme").onclick=()=>locate(false);
+
+/* ---------- 폰: 아래 시트 ---------- */
+const mq = matchMedia("(max-width:860px)");
+function isMobile(){ return mq.matches; }
+const sheet=$("sheet");
+let sheetState="min";
+const SNAP = { min:()=>Math.round(Math.min(168, innerHeight*.26)), mid:()=>Math.round(innerHeight*.5), max:()=>sheet.offsetHeight };
+function setVis(v){ document.documentElement.style.setProperty("--sheet-vis", v+"px"); }
+function setSheet(st, anim=true){
+  if (!isMobile()){ sheet.style.transform=""; sheet.style.transition=""; setVis(0); return; }
+  sheetState=st; const vis=Math.min(SNAP[st](), sheet.offsetHeight);
+  sheet.style.transition = anim ? "transform .26s cubic-bezier(.2,.8,.2,1)" : "none";
+  sheet.style.transform = `translateY(${sheet.offsetHeight-vis}px)`; setVis(vis);
+}
+function layoutTop(){
+  if (!isMobile()){ document.documentElement.style.removeProperty("--top-h"); return; }
+  document.documentElement.style.setProperty("--top-h", Math.round($("controls").getBoundingClientRect().bottom)+"px");
+}
+// 폰에서는 지역·상태 필터와 안내문을 시트 안으로 옮긴다
+function placeParts(){
+  const ward=$("ward"), seg=document.querySelector(".seg"), foot=document.querySelector(".foot");
+  if (isMobile()){ if(ward.parentNode!==$("mfilters")){ $("mfilters").append(ward, seg); $("sheetBody").append(foot); } }
+  else if (ward.parentNode!==$("ctlrow")){ $("ctlrow").append(ward, seg); document.querySelector(".wrap").append(foot); }
+}
+(()=>{ // 손잡이나 탭 줄을 위아래로 끌어서 시트 높이 조절
+  let y0=null, t0=0, drag=false, last=0, lastT=0, vy=0, src=null;
+  const cur=()=>{ const m=/translateY\(([-\d.]+)px\)/.exec(sheet.style.transform); return m?+m[1]:0; };
+  const start=e=>{ if(!isMobile()) return; y0=e.clientY; t0=cur(); drag=false; last=y0; lastT=performance.now(); vy=0; src=e.currentTarget; };
+  const move=e=>{ if(y0===null) return;
+    if (!drag){ if(Math.abs(e.clientY-y0)<6) return; drag=true; src.setPointerCapture(e.pointerId); sheet.style.transition="none"; }
+    const lim=sheet.offsetHeight-SNAP.min(), t=Math.max(0,Math.min(lim,t0+e.clientY-y0));
+    sheet.style.transform=`translateY(${t}px)`;
+    const now=performance.now(); vy=(e.clientY-last)/Math.max(1,now-lastT); last=e.clientY; lastT=now; };
+  const end=()=>{ if(y0===null) return; y0=null; if(!drag) return; drag=false;
+    const vis=sheet.offsetHeight-cur();
+    let st=Object.keys(SNAP).map(k=>[k,Math.abs(SNAP[k]()-vis)]).sort((a,b)=>a[1]-b[1])[0][0];
+    if (vy<-.45) st = vis>SNAP.mid()?"max":"mid"; else if (vy>.45) st = vis<SNAP.mid()?"min":"mid";
+    setSheet(st); };
+  [$("grab"), sheet.querySelector(".tabs")].forEach(h=>{ h.addEventListener("pointerdown",start); h.addEventListener("pointermove",move);
+    h.addEventListener("pointerup",end); h.addEventListener("pointercancel",end); });
+  $("grab").addEventListener("click",()=>setSheet(sheetState==="min"?"mid":sheetState==="mid"?"max":"min"));
+})();
+
+function update(refit){
+  PLACES.forEach(p=>{ p.show=matches(p); p.el.setAttribute("fill",`var(${pinVar(p)})`); });
+  renderLegend();
+  renderChips(); if(S.tab==="list") renderList(); if(S.tab==="rec") renderRec(); renderStats(); $("cbadge").textContent=day().ids.length;
+  if (isMobile()){ layoutTop(); setSheet(sheetState,false); }
+  cluCache.s=null; if(refit) fit(PLACES.filter(p=>p.show)); else apply();
+}
+
+renderLegend(); drawRoute(); placeParts();
+setTab(isMobile()?"rec":"list", true);
+update(); layoutTop(); setSheet("min",false);
+requestAnimationFrame(()=>{ layoutTop(); setSheet("min",false); fit(); });
+// 폰은 주소창이 들어갔다 나올 때마다 높이가 바뀌니, 너비가 바뀔 때만 다시 맞춘다
+let rz, lastW=innerWidth; addEventListener("resize",()=>{clearTimeout(rz); rz=setTimeout(()=>{
+  placeParts(); layoutTop(); setSheet(sheetState,false);
+  if (innerWidth!==lastW){ lastW=innerWidth; fit(); } else apply(); },150)});
+</script>
+</html>
