@@ -111,7 +111,10 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .card{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:0 12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px 11px 0;overflow:hidden;scroll-margin:80px}
 .cmain{min-width:0;cursor:pointer}
 .card .name{margin:0 0 2px;font-size:15px}
-.name .st,.rn .st{color:#e0a100;vertical-align:-1px;margin-right:4px}
+.name .st,.rn .st{color:var(--accent);vertical-align:-1px;margin-right:4px}
+.cside{display:flex;gap:6px;align-items:center}
+.svh{display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 6px;font-size:13px;font-weight:700}
+.svh:first-child{margin-top:2px}.svh span{color:var(--muted);font-weight:500;font-size:12px}
 .inc{color:var(--route);font-weight:600}
 .list{gap:6px}
 .card .bar{align-self:stretch;background:var(--c);border-radius:0 3px 3px 0}
@@ -130,7 +133,8 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .btn.on{border-color:var(--route);color:var(--route);font-weight:600}
 .btn:disabled{opacity:.45;cursor:default}
 .ic{width:32px;height:32px;border-radius:7px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;color:var(--muted);padding:0}
-.ic[aria-pressed="true"].fav{color:#e0a100;border-color:#e0a100}
+.ic[aria-pressed="true"].fav{color:var(--accent);border-color:var(--accent)}
+.btn.save{display:inline-flex;gap:4px;align-items:center}
 .ic[aria-pressed="true"].vis{color:var(--accent);border-color:var(--accent)}
 .empty{padding:32px 16px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:var(--r)}
 
@@ -225,7 +229,7 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
       <select id="ward" aria-label="지역"></select>
       <div class="seg" role="group" aria-label="상태">
         <button data-only="all" aria-pressed="true">전체</button>
-        <button data-only="fav" aria-pressed="false">꼭 가기</button>
+        <button data-only="fav" aria-pressed="false">저장한 곳</button>
         <button data-only="todo" aria-pressed="false">안 가본 곳</button>
         <button data-only="visited" aria-pressed="false">다녀온 곳</button>
       </div>
@@ -255,6 +259,7 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
       <div class="tabs" role="tablist">
         <button role="tab" id="tab-rec" aria-selected="false">근처 추천</button>
         <button role="tab" id="tab-list" aria-selected="true">목록</button>
+        <button role="tab" id="tab-saved" aria-selected="false">저장 <span class="badge" id="sbadge">0</span></button>
         <button role="tab" id="tab-course" aria-selected="false">코스 <span class="badge" id="cbadge">0</span></button>
       </div>
       <div class="sheet-body" id="sheetBody">
@@ -276,6 +281,10 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
         <div class="list" id="list"></div>
       </div>
 
+      <div id="pane-saved" hidden>
+        <div id="saved"></div>
+      </div>
+
       <div id="pane-course" hidden>
         <div class="days" id="days"></div>
         <div id="course"></div>
@@ -283,7 +292,7 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
       </div>
     </section>
   </div>
-  <div class="foot">꼭 가기·다녀온 곳·코스는 이 기기에만 저장돼요. 지도 © OpenStreetMap 기여자, dataofjapan/land</div>
+  <div class="foot">저장한 곳·다녀온 곳·코스는 이 기기에만 남아요. 지도 © OpenStreetMap 기여자, dataofjapan/land</div>
 </div>
 
 <script>
@@ -376,23 +385,24 @@ function renderStats(){ if(!$("stats")) return;
   const fav = PLACES.filter(p=>mk(p.cid).f).length, vis = PLACES.filter(p=>mk(p.cid).v).length;
   const inCourse = new Set(C.days.flatMap(d=>d.ids)).size;
   $("stats").innerHTML = `<div class="stat"><b>${PLACES.length}</b><span>저장 장소</span></div>
-    <div class="stat"><b>${fav}</b><span>꼭 가기</span></div><div class="stat"><b>${inCourse}</b><span>코스에 담음</span></div>
+    <div class="stat"><b>${fav}</b><span>저장</span></div><div class="stat"><b>${inCourse}</b><span>코스에 담음</span></div>
     <div class="stat"><b>${vis}</b><span>다녀옴</span></div>`;
 }
 
 /* ---------- 탭 ---------- */
 function setTab(t, quiet){ S.tab=t;
-  ["rec","list","course"].forEach(k=>{ $("tab-"+k).setAttribute("aria-selected", t===k); $("pane-"+k).hidden = t!==k; });
-  if(t==="course") renderCourse(); if(t==="list") renderList(); if(t==="rec") renderRec();
+  ["rec","list","saved","course"].forEach(k=>{ $("tab-"+k).setAttribute("aria-selected", t===k); $("pane-"+k).hidden = t!==k; });
+  if(t==="course") renderCourse(); if(t==="list") renderList(); if(t==="rec") renderRec(); if(t==="saved") renderSaved();
   drawBase(); if(!quiet){ apply(); if(isMobile() && sheetState==="min") setSheet("mid"); } }
-["rec","list","course"].forEach(k=>$("tab-"+k).onclick=()=>setTab(k));
+["rec","list","saved","course"].forEach(k=>$("tab-"+k).onclick=()=>setTab(k));
 
 /* ---------- 목록 ---------- */
-const ICON_STAR = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const ICON_SAVE = on => `<svg width="15" height="15" viewBox="0 0 24 24" fill="${on?"currentColor":"none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3.5h12v17l-6-4.2-6 4.2z"/></svg>`;
 const ICON_CHECK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
 const svgI = d => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const ICON_UP = svgI('<path d="m6 15 6-6 6 6"/>'), ICON_DOWN = svgI('<path d="m6 9 6 6 6-6"/>'), ICON_X = svgI('<path d="M6 6l12 12M18 6 6 18"/>');
-const ICON_STAR_S = `<svg class="st" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const ICON_STAR_S = `<svg class="st" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 3.5h12v17l-6-4.2-6 4.2z"/></svg>`;
+const saveIc = cid => { const on=!!mk(cid).f; return `<button class="ic fav" data-fav="${cid}" aria-pressed="${on}" aria-label="${on?"저장 취소":"저장"}" title="${on?"저장 취소":"저장"}">${ICON_SAVE(on)}</button>`; };
 const inDay = cid => day().ids.includes(cid);
 const courseBtn = cid => `<button class="btn${inDay(cid)?" on":""}" data-course="${cid}">${inDay(cid)?esc(day().name)+"에 담음":"코스 담기"}</button>`;
 function renderList(){
@@ -409,16 +419,32 @@ function renderList(){
         <div class="name">${m.f?ICON_STAR_S:""}${esc(p.n)}</div>
         <div class="meta"><span class="cat">${esc(typeLabel(p))}</span><span>${esc(hood(p))}</span>${inDay(p.cid)?`<span class="inc">${esc(day().name)}</span>`:""}</div>
       </div>
-      <a class="btn" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a>
+      <div class="cside">${saveIc(p.cid)}<a class="btn" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div>
     </article>`;
   }).join("");
+}
+// 저장 탭: 필터와 상관없이 저장한 곳 전부를 동네별로
+function renderSaved(){
+  const rows = PLACES.filter(p=>mk(p.cid).f);
+  if (!rows.length){ $("saved").innerHTML = `<div class="empty">가게 옆 ${ICON_SAVE(false)} 버튼을 누르면 여기에 모여요.</div>`; return; }
+  const groups = new Map();
+  rows.sort((a,b)=>a.n.localeCompare(b.n,"ko")).forEach(p=>{ const k=hood(p); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(p); });
+  const order = [...groups.keys()].sort((a,b)=>groups.get(b).length-groups.get(a).length);
+  $("saved").innerHTML = order.map(k=>`<div class="svh">${esc(k)}<span>${groups.get(k).length}곳</span></div>` + groups.get(k).map(p=>{
+    const m=mk(p.cid);
+    return `<article class="card${m.v?" visited":""}${S.sel===p.cid?" sel":""}" style="--c:var(${CVAR[p.c]})">
+      <div class="bar"></div>
+      <div class="cmain" data-pick="${p.cid}"><div class="name">${esc(p.n)}</div>
+        <div class="meta"><span class="cat">${esc(typeLabel(p))}</span>${m.v?"<span>다녀옴</span>":""}${inDay(p.cid)?`<span class="inc">${esc(day().name)}</span>`:""}</div></div>
+      <div class="cside">${saveIc(p.cid)}<a class="btn" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div>
+    </article>`; }).join("")).join("");
 }
 function toggleCourse(cid){
   const d=day(), i=d.ids.indexOf(cid);
   if (i>=0) d.ids.splice(i,1); else d.ids.push(cid);
   saveCourse(); refreshCourseBits();
 }
-function refreshCourseBits(){ $("cbadge").textContent = day().ids.length; renderStats(); if(S.tab==="list") renderList(); else renderCourse(); renderPeek(); drawRoute(); apply(); }
+function refreshCourseBits(){ $("cbadge").textContent = day().ids.length; renderStats(); ({list:renderList, rec:renderRec, saved:renderSaved, course:renderCourse})[S.tab]?.(); renderPeek(); drawRoute(); apply(); }
 document.addEventListener("click", e=>{
   const f=e.target.closest("[data-fav]"), v=e.target.closest("[data-vis]"), pk=e.target.closest("[data-pick]"), co=e.target.closest("[data-course]");
   if (co){ toggleCourse(co.dataset.course); return; }
@@ -709,7 +735,7 @@ function renderPeek(){
   pk.innerHTML=`<button class="x" id="pkx" aria-label="닫기">×</button>
     <div style="min-width:0"><div class="meta"><span class="cat">${esc(p.c)}</span><span>${esc(typeLabel(p))}</span><span>·</span><span>${esc(hood(p))}</span></div><div class="pn">${esc(p.n)}</div></div>
     <div class="pa">
-      <button class="ic fav" data-fav="${p.cid}" aria-pressed="${!!mk(p.cid).f}" aria-label="꼭 가기" title="꼭 가기">${ICON_STAR}</button>
+      <button class="btn save${mk(p.cid).f?" on":""}" data-fav="${p.cid}">${ICON_SAVE(!!mk(p.cid).f)}${mk(p.cid).f?"저장됨":"저장"}</button>
       <button class="ic vis" data-vis="${p.cid}" aria-pressed="${!!mk(p.cid).v}" aria-label="다녀옴" title="다녀옴">${ICON_CHECK}</button>
       ${courseBtn(p.cid)}<a class="btn" href="${gdir(p)}" target="_blank" rel="noopener">길찾기</a><a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div>`;
   $("pkx").onclick=()=>{ S.sel=null; renderPeek(); if(S.tab==="list") renderList(); cluCache.s=null; apply(); };
@@ -781,7 +807,7 @@ function renderRec(){
       + arr.map(({p,d})=>`<div class="ritem" style="--c:var(${CVAR[p.c]})"><div class="bar"></div>
           <div style="min-width:0"><div class="rn" data-pick="${p.cid}">${mk(p.cid).f?ICON_STAR_S:""}${esc(p.n)}</div>
             <div class="rm">${esc(typeLabel(p))} · ${fmtKm(d)} · 걸어서 ${fmtMin(walkMin(d))}</div></div>
-          <div class="ra">${courseBtn(p.cid)}<a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`).join("")).join("");
+          <div class="ra">${saveIc(p.cid)}${courseBtn(p.cid)}<a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`).join("")).join("");
   const ra=$("recadd"); if(ra) ra.onclick=()=>{
     // 시간대 순서대로 분류마다 1곳씩(쇼핑은 2곳), 술집은 저녁 이후에만
     const night = h>=17 || h<4, d=day();
@@ -878,7 +904,8 @@ function placeParts(){
 function update(refit){
   PLACES.forEach(p=>{ p.show=matches(p); p.el.setAttribute("fill",`var(${pinVar(p)})`); });
   renderLegend();
-  renderChips(); if(S.tab==="list") renderList(); if(S.tab==="rec") renderRec(); renderStats(); $("cbadge").textContent=day().ids.length;
+  renderChips(); if(S.tab==="list") renderList(); if(S.tab==="rec") renderRec(); if(S.tab==="saved") renderSaved(); renderStats(); $("cbadge").textContent=day().ids.length;
+  $("sbadge").textContent=PLACES.filter(p=>mk(p.cid).f).length;
   if (isMobile()){ layoutTop(); setSheet(sheetState,false); }
   cluCache.s=null; if(refit) fit(PLACES.filter(p=>p.show)); else apply();
 }
