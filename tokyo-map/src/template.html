@@ -173,6 +173,9 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .ritem .ra{display:flex;gap:4px}
 .toast{position:absolute;left:50%;top:calc(var(--top-h,56px) + 12px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:calc(100% - 32px);text-align:center}
 .zoom button.busy{opacity:.45}
+.zoom button.on{color:#2f7cf6}
+.ti,.navbar{display:none}
+*{-webkit-tap-highlight-color:transparent}
 .sheet-grab,.mfilters{display:none}
 
 /* 폰: 지도를 화면 전체에 깔고, 검색·분류는 위에 띄우고, 목록·추천·코스는 아래 시트로 */
@@ -193,17 +196,47 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
   .zoom{top:calc(var(--top-h,120px) + 8px)}
   .zoom #zin,.zoom #zout{display:none}
   .zoom button{width:42px;height:42px}
-  .peek{bottom:calc(var(--sheet-vis,150px) + 10px);transition:bottom .26s}
-  .sheet{position:fixed;z-index:40;left:0;right:0;bottom:0;height:calc(100dvh - var(--top-h,120px) + 4px);background:var(--bg);
+  .peek{bottom:calc(var(--sheet-vis,150px) + var(--nav-h) + 10px);transition:bottom .26s}
+  .sheet{position:fixed;z-index:40;left:0;right:0;bottom:var(--nav-h);height:calc(100dvh - var(--top-h,120px) + 4px - var(--nav-h));background:var(--bg);
     border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.16);display:flex;flex-direction:column;will-change:transform}
   .sheet-grab{display:block;height:22px;flex:none;touch-action:none;cursor:grab}
   .sheet-grab::before{content:"";display:block;width:40px;height:5px;border-radius:3px;background:var(--line);margin:9px auto 0}
   .sheet .tabs{padding:0 12px;margin:0;flex:none;touch-action:none}
   .sheet .tabs button{flex:1;padding:10px 4px}
-  .sheet-body{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(env(safe-area-inset-bottom,0px) + 28px);overscroll-behavior:contain}
+  .sheet-body{flex:1;min-height:0;overflow:auto;padding:4px 12px 24px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   .mfilters{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
   .mfilters select{width:100%}
   .foot{margin-top:18px}
+  /* 앱처럼: 아래 고정 탭바, 큰 터치 영역, 당겨서 새로고침·글자 선택 막기 */
+  :root{--nav-h:calc(56px + env(safe-area-inset-bottom,0px))}
+  html,body{overscroll-behavior:none;overflow:hidden;height:100%}
+  button,.chip,.btn,.tabs,.card .name{-webkit-user-select:none;user-select:none}
+  .navbar{display:block;position:fixed;z-index:45;left:0;right:0;bottom:0;height:var(--nav-h);padding-bottom:env(safe-area-inset-bottom,0px);
+    background:var(--panel);border-top:1px solid var(--line)}
+  .navbar .tabs{display:flex;gap:0;border:0;margin:0;padding:0 4px;height:56px}
+  .navbar .tabs button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative;
+    padding:0;margin:0;border:0;font-size:11px;font-weight:600;color:var(--muted);transition:color .15s}
+  .navbar .tabs button[aria-selected="true"]{color:var(--accent)}
+  .navbar .tabs button[aria-selected="true"] .ti svg{stroke-width:2.4}
+  .navbar .tabs button:active .ti{transform:scale(.88)}
+  .navbar .ti{display:block;height:22px;transition:transform .12s}
+  .navbar .badge[data-n="0"]{display:none}
+  .navbar .badge{position:absolute;top:5px;left:calc(50% + 7px);margin:0;min-width:16px;padding:0 4px;line-height:16px;font-size:10px;border-radius:8px}
+  .btn{height:38px;padding:0 13px;font-size:13px;border-radius:9px}
+  .ic{width:38px;height:38px;border-radius:9px}
+  .chip{height:36px;font-size:13.5px}
+  .chips.subs .chip{height:32px;font-size:12.5px}
+  .btn:active,.chip:active,.ic:active,.zoom button:active{transform:scale(.95)}
+  .cmain:active{opacity:.6}
+  .mfilters select,#sort{height:44px;font-size:16px}
+  .seg button{min-height:40px}
+  /* 장소 카드: 윗줄 저장·다녀옴·코스, 아랫줄 길찾기·구글맵 */
+  .peek .pa{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .peek .pa>*{width:auto;height:42px}
+  .peek .pa>.save{grid-column:span 2}
+  .peek .pa>[data-course],.peek .pa>a{grid-column:span 3}
+  .zoom{border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.14)}
+  .zoom button{width:46px;height:46px}
 }
 @media (max-width:440px){
   .peek{grid-template-columns:1fr}
@@ -252,10 +285,10 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
     <section class="sheet" id="sheet" aria-label="추천, 목록, 코스">
       <div class="sheet-grab" id="grab" aria-hidden="true"></div>
       <div class="tabs" role="tablist">
-        <button role="tab" id="tab-rec" aria-selected="false">근처 추천</button>
-        <button role="tab" id="tab-list" aria-selected="true">목록</button>
-        <button role="tab" id="tab-saved" aria-selected="false">저장 <span class="badge" id="sbadge">0</span></button>
-        <button role="tab" id="tab-course" aria-selected="false">코스 <span class="badge" id="cbadge">0</span></button>
+        <button role="tab" id="tab-rec" aria-selected="false"><span class="ti"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></span><span>근처 추천</span></button>
+        <button role="tab" id="tab-list" aria-selected="true"><span class="ti"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></span><span>목록</span></button>
+        <button role="tab" id="tab-saved" aria-selected="false"><span class="ti"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12v17l-6-4.2-6 4.2z"/></svg></span><span>저장</span> <span class="badge" id="sbadge">0</span></button>
+        <button role="tab" id="tab-course" aria-selected="false"><span class="ti"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/></svg></span><span>코스</span> <span class="badge" id="cbadge">0</span></button>
       </div>
       <div class="sheet-body" id="sheetBody">
 
@@ -286,6 +319,7 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
       </div>
       </div>
     </section>
+    <nav class="navbar" id="navbar" aria-label="화면 전환"></nav>
   </div>
   <div class="foot">저장한 곳·다녀온 곳·코스는 이 기기에만 남아요. 지도 © OpenStreetMap 기여자, dataofjapan/land</div>
 </div>
@@ -385,11 +419,12 @@ function renderStats(){ if(!$("stats")) return;
 }
 
 /* ---------- 탭 ---------- */
-function setTab(t, quiet){ S.tab=t;
+function setTab(t, quiet){ S.tab=t; $("sheetBody").scrollTop=0;
   ["rec","list","saved","course"].forEach(k=>{ $("tab-"+k).setAttribute("aria-selected", t===k); $("pane-"+k).hidden = t!==k; });
   if(t==="course") renderCourse(); if(t==="list") renderList(); if(t==="rec") renderRec(); if(t==="saved") renderSaved();
   drawBase(); if(!quiet){ apply(); if(isMobile() && sheetState==="min") setSheet("mid"); } }
-["rec","list","saved","course"].forEach(k=>$("tab-"+k).onclick=()=>setTab(k));
+// 폰에서 이미 열려 있는 탭을 다시 누르면 시트를 접었다 편다
+["rec","list","saved","course"].forEach(k=>$("tab-"+k).onclick=()=>{ if(isMobile() && S.tab===k){ setSheet(sheetState==="min"?"mid":"min"); return; } setTab(k); });
 
 /* ---------- 목록 ---------- */
 const ICON_SAVE = on => `<svg width="15" height="15" viewBox="0 0 24 24" fill="${on?"currentColor":"none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3.5h12v17l-6-4.2-6 4.2z"/></svg>`;
@@ -439,7 +474,7 @@ function toggleCourse(cid){
   if (i>=0) d.ids.splice(i,1); else d.ids.push(cid);
   saveCourse(); refreshCourseBits();
 }
-function refreshCourseBits(){ $("cbadge").textContent = day().ids.length; renderStats(); ({list:renderList, rec:renderRec, saved:renderSaved, course:renderCourse})[S.tab]?.(); renderPeek(); drawRoute(); apply(); }
+function refreshCourseBits(){ setBadge("cbadge", day().ids.length); renderStats(); ({list:renderList, rec:renderRec, saved:renderSaved, course:renderCourse})[S.tab]?.(); renderPeek(); drawRoute(); apply(); }
 document.addEventListener("click", e=>{
   const f=e.target.closest("[data-fav]"), v=e.target.closest("[data-vis]"), pk=e.target.closest("[data-pick]"), co=e.target.closest("[data-course]");
   if (co){ toggleCourse(co.dataset.course); return; }
@@ -676,7 +711,7 @@ function fit(list, pad=46){
 function insets(){ if(!isMobile()) return {t:48,b:0};
   const cs=getComputedStyle(document.documentElement);
   // 시트를 끝까지 올린 상태에서도 지도 계산이 뒤집히지 않게 아래 가림은 화면 절반까지만 친다
-  return {t:(parseFloat(cs.getPropertyValue("--top-h"))||110)+6, b:Math.min(parseFloat(cs.getPropertyValue("--sheet-vis"))||0, size()[1]*.5)}; }
+  return {t:(parseFloat(cs.getPropertyValue("--top-h"))||110)+6, b:Math.min((parseFloat(cs.getPropertyValue("--sheet-vis"))||0)+$("navbar").offsetHeight, size()[1]*.5)}; }
 function flyTo(x,y,s){ const [w,h]=size(), {t,b}=insets(); V={s, tx:w/2-x*s, ty:(t+h-b)/2-y*s}; apply(); }
 function areaScale(rk){ const [w,h]=size(), {t,b}=insets(); return Math.max(60,Math.min(w,h-t-b))/(rk*2*1000/11.1); } // 월드 단위 ≈ 11.1m
 function viewCenter(){ const [w,h]=size(), {t,b}=insets(); const x=(w/2-V.tx)/V.s, y=((t+h-b)/2-V.ty)/V.s;
@@ -713,8 +748,13 @@ function up(e){ const had=ptrs.has(e.pointerId); ptrs.delete(e.pointerId); if(pt
     const xs=arr.map(p=>p.x), ys=arr.map(p=>p.y), span=Math.max(Math.max(...xs)-Math.min(...xs), Math.max(...ys)-Math.min(...ys), 20);
     flyTo(x,y,Math.max(V.s*2.2, Math.min(fitS*12,(Math.min(w,h)-120)/span))); return; }
   const cid=t&&t.dataset&&t.dataset.cid; if(cid){ select(cid,false); return; }
+  const now=performance.now(), r=svg.getBoundingClientRect();
+  if (now-lastTap.t<320 && Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<32){ lastTap.t=0; zoomAt(2,e.clientX-r.left,e.clientY-r.top); return; }
+  lastTap={t:now,x:e.clientX,y:e.clientY};
   if (S.sel){ S.sel=null; renderPeek(); if(S.tab==="list") renderList(); cluCache.s=null; apply(); }
 }
+let lastTap={t:0,x:0,y:0};
+function setBadge(id,n){ const b=$(id); b.textContent=n; b.dataset.n=n; } // 0이면 폰 탭바에서 숨긴다
 svg.addEventListener("pointerup",up); svg.addEventListener("pointercancel",up);
 svg.addEventListener("pointerleave",()=>{$("tip").style.display="none"});
 function hover(e){
@@ -846,20 +886,32 @@ function locate(forRec){
     zb.classList.remove("busy");
     ME={lat:pos.coords.latitude, lng:pos.coords.longitude};
     if (km(ME,{lat:35.68,lng:139.73})>40){ ME=null; drawMe(); toast("지금은 도쿄 밖이에요. 동네를 골라 보세요"); return; }
-    drawMe();
+    drawMe(); startWatch();
     if (forRec || S.tab==="rec"){ R.base={...ME, label:"내 위치"}; R.key="me"; if(S.tab!=="rec") setTab("rec"); renderRec(); drawBase(); focusRec(); }
     else { const [x,y]=proj(ME.lat,ME.lng); flyTo(x,y,Math.max(V.s,areaScale(1))); }
   }, err=>{ zb.classList.remove("busy"); toast(err.code===1?"위치 권한이 꺼져 있어요. 브라우저 설정에서 켜 주세요":"위치를 가져오지 못했어요"); },
   {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
 }
 $("zme").onclick=()=>locate(false);
+// 한 번 위치를 잡은 뒤에는 걷는 동안 파란 점이 따라온다. 60m 넘게 움직이면 내 위치 추천도 다시 고른다
+let watchId=null;
+function startWatch(){
+  if (watchId!==null) return; $("zme").classList.add("on");
+  watchId=navigator.geolocation.watchPosition(pos=>{
+    const me={lat:pos.coords.latitude, lng:pos.coords.longitude};
+    if (km(me,{lat:35.68,lng:139.73})>40) return;
+    ME=me; drawMe();
+    if (R.key==="me" && R.base && km(R.base,ME)>.06){ R.base={...ME, label:"내 위치"}; if(S.tab==="rec"){ renderRec(); drawBase(); } }
+    apply();
+  }, ()=>{}, {enableHighAccuracy:true, maximumAge:15000});
+}
 
 /* ---------- 폰: 아래 시트 ---------- */
 const mq = matchMedia("(max-width:860px)");
 function isMobile(){ return mq.matches; }
 const sheet=$("sheet");
 let sheetState="min";
-const SNAP = { min:()=>Math.round(Math.min(168, innerHeight*.26)), mid:()=>Math.round(innerHeight*.5), max:()=>sheet.offsetHeight };
+const SNAP = { min:()=>Math.round(Math.min(132, innerHeight*.2)), mid:()=>Math.round(innerHeight*.46), max:()=>sheet.offsetHeight };
 function setVis(v){ document.documentElement.style.setProperty("--sheet-vis", v+"px"); }
 function setSheet(st, anim=true){
   if (!isMobile()){ sheet.style.transform=""; sheet.style.transition=""; setVis(0); return; }
@@ -874,13 +926,14 @@ function layoutTop(){
 // 폰에서는 지역·상태 필터와 안내문을 시트 안으로 옮긴다
 function placeParts(){
   const ward=$("ward"), seg=document.querySelector(".seg"), foot=document.querySelector(".foot");
-  if (isMobile()){ if(ward.parentNode!==$("mfilters")){ $("mfilters").append(ward, seg); $("sheetBody").append(foot); } }
-  else if (ward.parentNode!==$("ctlrow")){ $("ctlrow").append(ward, seg); document.querySelector(".wrap").append(foot); }
+  const tabs=document.querySelector(".tabs"); // 폰: 탭 줄을 아래 고정 탭바로
+  if (isMobile()){ if(ward.parentNode!==$("mfilters")){ $("mfilters").append(ward, seg); $("sheetBody").append(foot); $("navbar").append(tabs); } }
+  else if (ward.parentNode!==$("ctlrow")){ $("ctlrow").append(ward, seg); document.querySelector(".wrap").append(foot); sheet.insertBefore(tabs, $("sheetBody")); }
 }
 (()=>{ // 손잡이나 탭 줄을 위아래로 끌어서 시트 높이 조절
   let y0=null, t0=0, drag=false, last=0, lastT=0, vy=0, src=null;
   const cur=()=>{ const m=/translateY\(([-\d.]+)px\)/.exec(sheet.style.transform); return m?+m[1]:0; };
-  const start=e=>{ if(!isMobile()) return; y0=e.clientY; t0=cur(); drag=false; last=y0; lastT=performance.now(); vy=0; src=e.currentTarget; };
+  const start=e=>{ if(!isMobile() || e.currentTarget.closest("#navbar")) return; y0=e.clientY; t0=cur(); drag=false; last=y0; lastT=performance.now(); vy=0; src=e.currentTarget; };
   const move=e=>{ if(y0===null) return;
     if (!drag){ if(Math.abs(e.clientY-y0)<6) return; drag=true; src.setPointerCapture(e.pointerId); sheet.style.transition="none"; }
     const lim=sheet.offsetHeight-SNAP.min(), t=Math.max(0,Math.min(lim,t0+e.clientY-y0));
@@ -891,7 +944,7 @@ function placeParts(){
     let st=Object.keys(SNAP).map(k=>[k,Math.abs(SNAP[k]()-vis)]).sort((a,b)=>a[1]-b[1])[0][0];
     if (vy<-.45) st = vis>SNAP.mid()?"max":"mid"; else if (vy>.45) st = vis<SNAP.mid()?"min":"mid";
     setSheet(st); };
-  [$("grab"), sheet.querySelector(".tabs")].forEach(h=>{ h.addEventListener("pointerdown",start); h.addEventListener("pointermove",move);
+  [$("grab"), document.querySelector(".tabs")].forEach(h=>{ h.addEventListener("pointerdown",start); h.addEventListener("pointermove",move);
     h.addEventListener("pointerup",end); h.addEventListener("pointercancel",end); });
   $("grab").addEventListener("click",()=>setSheet(sheetState==="min"?"mid":sheetState==="mid"?"max":"min"));
 })();
@@ -899,8 +952,8 @@ function placeParts(){
 function update(refit){
   PLACES.forEach(p=>{ p.show=matches(p); p.el.setAttribute("fill",`var(${pinVar(p)})`); });
   renderLegend();
-  renderChips(); if(S.tab==="list") renderList(); if(S.tab==="rec") renderRec(); if(S.tab==="saved") renderSaved(); renderStats(); $("cbadge").textContent=day().ids.length;
-  $("sbadge").textContent=PLACES.filter(p=>mk(p.cid).f).length;
+  renderChips(); if(S.tab==="list") renderList(); if(S.tab==="rec") renderRec(); if(S.tab==="saved") renderSaved(); renderStats(); setBadge("cbadge", day().ids.length);
+  setBadge("sbadge", PLACES.filter(p=>mk(p.cid).f).length);
   if (isMobile()){ layoutTop(); setSheet(sheetState,false); }
   cluCache.s=null; if(refit) fit(PLACES.filter(p=>p.show)); else apply();
 }
