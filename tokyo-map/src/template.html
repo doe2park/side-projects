@@ -161,6 +161,8 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .rtop{display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
 .rtop .big{font-family:var(--f-display);font-weight:900;font-size:17px;line-height:1.25}
 .rtop .small{font-size:12px;color:var(--muted)}
+.rmore{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;padding-top:8px;border-top:1px solid var(--line)}
+#recall{min-height:44px}
 .rech{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 6px}
 .rech h3{margin:0;font-family:var(--f-display);font-weight:700;font-size:15px}
 .rech .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:7px;vertical-align:1px}
@@ -403,7 +405,15 @@ function renderChips(){
 }
 $("cats").addEventListener("click", e=>{ const b=e.target.closest("[data-cat]"); if(!b) return; S.cat=b.dataset.cat; S.subs=new Set(); update(); });
 $("subs").addEventListener("click", e=>{ const b=e.target.closest("[data-sub]"); if(!b) return; const v=b.dataset.sub; if(v==="전체") S.subs.clear(); else if(S.subs.has(v)) S.subs.delete(v); else S.subs.add(v); update(); });
-$("ward").addEventListener("change", e=>{ S.ward=e.target.value; update(true); });
+$("ward").addEventListener("change", e=>{
+  S.ward=e.target.value;
+  if(S.tab==="rec"){
+    const i=HOODS.findIndex(([n])=>n===S.ward);
+    if(i>=0 || S.ward==="전체"){ chooseRecArea(i>=0?"h"+i:"view"); return; }
+    setTab("list");
+  }
+  update(true);
+});
 $("q").addEventListener("input", e=>{ S.q=e.target.value.trim(); update(); });
 $("sort").addEventListener("change", e=>{ S.sort=e.target.value; renderList(); });
 document.querySelector(".seg").addEventListener("click", e=>{
@@ -421,7 +431,7 @@ function renderStats(){ if(!$("stats")) return;
 /* ---------- 탭 ---------- */
 function setTab(t, quiet){ S.tab=t; $("sheetBody").scrollTop=0;
   ["rec","list","saved","course"].forEach(k=>{ $("tab-"+k).setAttribute("aria-selected", t===k); $("pane-"+k).hidden = t!==k; });
-  if(t==="course") renderCourse(); if(t==="list") renderList(); if(t==="rec") renderRec(); if(t==="saved") renderSaved();
+  if(t==="course") renderCourse(); if(t==="list") renderList(); if(t==="rec"){ syncRecWard(); update(); } if(t==="saved") renderSaved();
   drawBase(); if(!quiet){ apply(); if(isMobile() && sheetState==="min") setSheet("mid"); } }
 // 폰에서 이미 열려 있는 탭을 다시 누르면 시트를 접었다 편다
 ["rec","list","saved","course"].forEach(k=>$("tab-"+k).onclick=()=>{ if(isMobile() && S.tab===k){ setSheet(sheetState==="min"?"mid":"min"); return; } setTab(k); });
@@ -796,6 +806,24 @@ const R = { base:null, key:"view" }; // view = 지금 지도 화면을 따라감
 const HOODS = [["하라주쿠·오모테산도",35.6690,139.7080],["시부야",35.6598,139.7010],["긴자·유라쿠초",35.6717,139.7640],["아사쿠사",35.7120,139.7960],
   ["츠키지",35.6655,139.7705],["에비스·나카메구로",35.6460,139.7020],["신주쿠",35.6915,139.7025],["아키하바라",35.6984,139.7731],["도요스·오다이바",35.6500,139.7900],
   ["롯폰기·아자부",35.6600,139.7300],["니혼바시·도쿄역",35.6830,139.7725],["시모키타자와",35.6615,139.6680],["우에노",35.7110,139.7760],["기치조지",35.7030,139.5797]];
+// 추천 지역과 목록의 지역 필터가 서로 다른 동네를 가리키지 않게 한다.
+function syncRecWard(){
+  S.ward=R.key.startsWith("h") && R.base ? R.base.label : "전체";
+  $("ward").value=S.ward;
+}
+function chooseRecArea(k){
+  R.key=k;
+  if(k!=="view"){ const [n,lat,lng]=HOODS[+k.slice(1)]; R.base={lat,lng,label:n}; }
+  syncRecWard(); update(); drawBase();
+  if(k!=="view") focusRec();
+}
+function showRecList(){
+  if(!R.key.startsWith("h") || !R.base) return;
+  S.ward=R.base.label; S.cat="전체"; S.subs.clear(); S.q=""; S.only="all";
+  $("ward").value=S.ward; $("q").value="";
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.only==="all"));
+  setTab("list"); if(isMobile()) setSheet("max"); update(true);
+}
 // 지도를 옮기거나 확대하면 잠깐 뒤 추천을 다시 고른다
 function recFollow(){ clearTimeout(window.__recT); window.__recT=setTimeout(()=>{ if(S.tab==="rec" && R.key==="view") renderRec(); }, 180); }
 // 위 검색줄과 아래 시트에 가리지 않고 화면에 보이는가
@@ -835,14 +863,17 @@ function renderRec(){
   const h=tokyoHour();
   recSecs = recOrder(h).filter(c=>S.cat==="전체" || c===S.cat).map(c=>[c, pickNear(c, R.base)]);
   const n = recSecs.reduce((a,[,arr])=>a+arr.length,0);
-  $("rec").innerHTML = `<div class="rtop"><div><div class="big">${R.key==="view"?`화면 안에서 ${n}곳`:R.key==="me"?`내 위치 근처 ${n}곳`:`${esc(R.base.label)}에서 ${n}곳`}</div>
+  const total=PLACES.filter(p=>p.h===R.base.label).length;
+  $("rec").innerHTML = `<div class="rtop"><div><div class="big">${R.key==="view"?`화면 안에서 추천 ${n}곳`:R.key==="me"?`내 위치 근처 추천 ${n}곳`:`${esc(R.base.label)} 추천 ${n}곳`}</div>
       <div class="small">도쿄 ${tokyoTime()} · ${R.key==="view"?"화면 가운데에서 가까운 순":R.key==="me"?`${RADIUS}km 안`:"동네 가운데에서 가까운 순"}</div></div>
-      <button class="btn" id="recadd" ${n<2?"disabled":""}>코스로 담기</button></div>`
+      <button class="btn" id="recadd" ${n<2?"disabled":""}>코스로 담기</button>
+      ${R.key.startsWith("h")?`<div class="rmore"><span class="small">추천은 일부만 골라 보여줘요.</span><button class="btn primary" id="recall" aria-label="${esc(R.base.label)} 전체 ${total}곳 보기" title="검색·분류·저장 상태 필터를 해제하고 이 지역의 전체 목록을 봐요">전체 ${total}곳 보기</button></div>`:""}</div>`
     + recSecs.map(([c,arr])=>`<div class="rech"><h3 style="--c:var(${CVAR[c]})"><span class="dot"></span>${REC_NAME[c]}</h3><span>${arr.length?"":(R.key==="view"?"화면 안에 없음":R.key==="me"?"근처에 저장한 곳 없음":"이 동네엔 없음")}</span></div>`
       + arr.map(({p,d})=>`<div class="ritem" style="--c:var(${CVAR[p.c]})"><div class="bar"></div>
           <div style="min-width:0"><div class="rn" data-pick="${p.cid}">${mk(p.cid).f?ICON_STAR_S:""}${esc(p.n)}</div>
             <div class="rm">${esc(typeLabel(p))} · ${fmtKm(d)} · 걸어서 ${fmtMin(walkMin(d))}</div></div>
           <div class="ra">${saveIc(p.cid)}${courseBtn(p.cid)}<a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`).join("")).join("");
+  const all=$("recall"); if(all) all.onclick=showRecList;
   const ra=$("recadd"); if(ra) ra.onclick=()=>{
     // 시간대 순서대로 분류마다 1곳씩(쇼핑은 2곳), 술집은 저녁 이후에만
     const night = h>=17 || h<4, d=day();
@@ -866,11 +897,9 @@ function drawBase(){
 $("recbase").addEventListener("click", e=>{
   const b=e.target.closest("[data-rb]"); if(!b) return; const k=b.dataset.rb;
   if (k==="me"){ locate(true); return; }
-  if(isMobile() && sheetState==="max") setSheet("mid");
+  if(isMobile() && sheetState!=="mid") setSheet("mid");
   // 지도 화면: 지도를 따라감 / 동네 버튼: 그 동네 가게만 고르고 지도를 거기로 맞춤
-  if (k==="view"){ R.key="view"; renderRec(); drawBase(); return; }
-  const [n,lat,lng]=HOODS[+k.slice(1)]; R.base={lat,lng,label:n}; R.key=k;
-  renderRec(); drawBase(); focusRec();
+  chooseRecArea(k);
 });
 // 내 위치
 let ME=null, meDot=null, toastT;
@@ -887,7 +916,7 @@ function locate(forRec){
     ME={lat:pos.coords.latitude, lng:pos.coords.longitude};
     if (km(ME,{lat:35.68,lng:139.73})>40){ ME=null; drawMe(); toast("지금은 도쿄 밖이에요. 동네를 골라 보세요"); return; }
     drawMe(); startWatch();
-    if (forRec || S.tab==="rec"){ R.base={...ME, label:"내 위치"}; R.key="me"; if(S.tab!=="rec") setTab("rec"); renderRec(); drawBase(); focusRec(); }
+    if (forRec || S.tab==="rec"){ R.base={...ME, label:"내 위치"}; R.key="me"; syncRecWard(); if(S.tab!=="rec") setTab("rec"); else update(); drawBase(); focusRec(); }
     else { const [x,y]=proj(ME.lat,ME.lng); flyTo(x,y,Math.max(V.s,areaScale(1))); }
   }, err=>{ zb.classList.remove("busy"); toast(err.code===1?"위치 권한이 꺼져 있어요. 브라우저 설정에서 켜 주세요":"위치를 가져오지 못했어요"); },
   {enableHighAccuracy:true, timeout:10000, maximumAge:60000});

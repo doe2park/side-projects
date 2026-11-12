@@ -1,0 +1,7 @@
+{
+  "name": "tokyo-map",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/region-logic.test.cjs"
+  }
+}
