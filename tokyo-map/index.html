@@ -175,6 +175,12 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .rtop{display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
 .rtop .big{font-family:var(--f-display);font-weight:900;font-size:17px;line-height:1.25}
 .rtop .small{font-size:12px;color:var(--muted)}
+.hgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.htile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:60px;padding:10px 12px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);color:var(--ink)}
+.htile b{font-family:var(--f-display);font-weight:700;font-size:14px;line-height:1.3}
+.htile span{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.htile:disabled{opacity:.45}
+.htile:not(:disabled):active{transform:scale(.97)}
 .rmore{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;padding-top:8px;border-top:1px solid var(--line)}
 #recall{min-height:44px}
 .rech{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 6px}
@@ -865,9 +871,15 @@ function pickNear(cat, base){
 }
 let recSecs=[];
 function renderRec(){
-  $("recbase").innerHTML = `<button class="chip" data-rb="me" aria-pressed="${R.key==="me"}">${ICON_LOC}내 위치</button>`
+  $("recbase").innerHTML = `<button class="chip" data-rb="all" aria-pressed="${!R.key}">전체</button>`
+    + `<button class="chip" data-rb="me" aria-pressed="${R.key==="me"}">${ICON_LOC}내 위치</button>`
     + HOODS.map(([n],i)=>`<button class="chip" data-rb="h${i}" aria-pressed="${R.key==="h"+i}">${n}</button>`).join("");
-  if (!R.base){ recSecs=[]; $("rec").innerHTML = `<div class="empty">동네를 누르면 그 동네에 저장한 곳을 모두 보여줘요.</div>`; return; }
+  if (!R.base){ // 전체: 동네 고르는 화면
+    recSecs=[]; const shown=PLACES.filter(p=>p.show);
+    $("rec").innerHTML = `<div class="rtop"><div><div class="big">도쿄 전체 ${shown.length}곳</div><div class="small">동네를 누르면 그 동네만 보여요.</div></div></div>
+      <div class="hgrid">` + HOODS.map(([n],i)=>{ const c=shown.filter(p=>p.h===n).length;
+        return `<button class="htile" data-hood="h${i}" ${c?"":"disabled"}><b>${esc(n)}</b><span>${c}곳</span></button>`; }).join("") + `</div>`;
+    return; }
   const h=tokyoHour();
   // 동네 전부 보기에서는 숙소·관광처럼 추천에 안 쓰는 분류도 뒤에 붙인다
   const order = R.key==="me" ? recOrder(h) : [...recOrder(h), ...CATS.map(c=>c[0]).filter(c=>!REC_N[c])];
@@ -909,9 +921,13 @@ $("recbase").addEventListener("click", e=>{
   const b=e.target.closest("[data-rb]"); if(!b) return; const k=b.dataset.rb;
   if (k==="me"){ locate(true); return; }
   if(isMobile() && sheetState!=="mid") setSheet("mid");
+  // 전체, 또는 고른 동네를 한 번 더 누르면: 동네 선택을 풀고 지도를 전체로 되돌림
+  if (k==="all" || k===R.key){ chooseRecArea(""); fit(PLACES.filter(p=>p.show)); return; }
   // 동네 버튼: 그 동네 가게를 전부 보여주고 지도를 거기로 맞춤
   chooseRecArea(k);
 });
+// 전체 화면의 동네 타일은 위쪽 동네 버튼을 누른 것과 같다
+$("rec").addEventListener("click", e=>{ const t=e.target.closest("[data-hood]"); if(t) $("recbase").querySelector(`[data-rb="${t.dataset.hood}"]`).click(); });
 // 내 위치
 let ME=null, meDot=null, toastT;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, 3200); }

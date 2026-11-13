@@ -168,3 +168,17 @@ test('choosing a recommendation neighborhood expands an initially collapsed mobi
   assert.equal(a.run('sheetState'), 'mid', 'Neighborhood choice must expose its list');
   assert.equal(a.run('recSecs.flatMap(([,r])=>r).length'), 42);
 });
+
+test('"전체" and tapping the active neighbourhood again both return to all areas', () => {
+  const a = app();
+  assert.match(a.element('recbase').innerHTML, /data-rb="all" aria-pressed="true"/);
+  assert.match(a.element('rec').innerHTML, /도쿄 전체 238곳/);
+  assert.match(a.element('rec').innerHTML, /data-hood="h0"[^>]*><b>하라주쿠·오모테산도<\/b><span>42곳/);
+  for (const back of ['all', 'h0']) {
+    a.choose('h0'); assert.equal(a.run('PLACES.filter(p=>p.show).length'), 42);
+    a.choose(back);
+    assert.deepEqual(a.values('[R.key,R.base,S.ward]'), ['', null, '전체']);
+    assert.equal(a.run('PLACES.filter(p=>p.show).length'), 238);
+    assert.match(a.element('rec').innerHTML, /도쿄 전체 238곳/);
+  }
+});
