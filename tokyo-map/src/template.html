@@ -89,7 +89,9 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .legend .ln{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:4px;vertical-align:2px}
 .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:4px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-150%);display:none;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 
-.peek{position:absolute;left:10px;right:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);
+.peek{position:absolute;left:10px;right:10px;bottom:10px}
+.peek[hidden]{display:none}
+.pcard{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);
   padding:12px 12px 12px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;border-left:5px solid var(--c)}
 .peek .x{position:absolute;right:6px;top:4px;border:0;background:transparent;color:var(--muted);font-size:18px;width:28px;height:28px}
 .peek .pn{font-family:var(--f-display);font-weight:700;font-size:16px;line-height:1.3;overflow-wrap:anywhere;padding-right:20px}
@@ -140,15 +142,18 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .csum .big{font-family:var(--f-display);font-weight:900;font-size:18px;font-variant-numeric:tabular-nums}
 .csum .small{font-size:12px;color:var(--muted)}
 .cacts{display:flex;flex-wrap:wrap;gap:6px}
-.stops{display:flex;flex-direction:column}
-.stop{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+/* 코스는 세로 선 하나에 번호를 꿴 타임라인 */
+.stops{display:flex;flex-direction:column;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px}
+.stops::before{content:"";position:absolute;left:22px;top:26px;bottom:26px;width:2px;background:var(--line)}
+.stop{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;position:relative}
+.stop .num{background:var(--c);color:var(--panel);box-shadow:0 0 0 3px var(--panel)}
 .num{width:26px;height:26px;border-radius:50%;background:var(--route);color:var(--route-ink);display:grid;place-items:center;font-family:var(--f-mono);font-size:12px}
 .stop .sn{font-family:var(--f-display);font-weight:700;line-height:1.3;overflow-wrap:anywhere;cursor:pointer}
 .stop .sm{font-size:12px;color:var(--muted)}
 .stop .ctl{display:flex;gap:2px}
 .stop .ctl button{width:28px;height:28px;border:1px solid var(--line);background:var(--panel);border-radius:6px;color:var(--muted);padding:0;display:grid;place-items:center}
 .stop .ctl button:disabled{opacity:.35}
-.leg{display:flex;align-items:center;gap:8px;padding:6px 0 6px 22px;font-size:12px;color:var(--muted);border-left:2px dashed var(--route);margin-left:23px}
+.leg{display:flex;align-items:center;gap:8px;padding:0 0 4px 36px;font-size:12px;color:var(--muted)}
 .leg a{color:var(--accent);font-weight:600;text-decoration:none}
 .leg a:hover{text-decoration:underline}
 .routes{display:flex;flex-direction:column;gap:6px;margin-top:12px}
@@ -169,6 +174,14 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .htile:not(:disabled):active{transform:scale(.97)}
 .rmore{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;padding-top:8px;border-top:1px solid var(--line)}
 #recall{min-height:44px}
+.racc{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-top:8px;overflow:hidden}
+.racc summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:46px;padding:0 12px;font-family:var(--f-display);font-weight:700;font-size:15px;-webkit-user-select:none;user-select:none}
+.racc summary::-webkit-details-marker{display:none}
+.racc summary .dot{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.racc summary .n{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:500}
+.racc summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s;margin:0 2px 3px 4px}
+.racc[open] summary::after{transform:rotate(-135deg);margin-bottom:-3px}
+.racc .ritem{border:0;border-top:1px solid var(--line);border-radius:0;margin:0;background:transparent}
 .rech{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 6px}
 .rech h3{margin:0;font-family:var(--f-display);font-weight:700;font-size:15px}
 .rech .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:7px;vertical-align:1px}
@@ -182,6 +195,7 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
 .toast{position:absolute;left:50%;top:calc(var(--top-h,56px) + 12px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:calc(100% - 32px);text-align:center}
 .zoom button.busy{opacity:.45}
 .zoom button.on{color:#2f7cf6}
+.pcount{display:none}
 .ti,.navbar{display:none}
 *{-webkit-tap-highlight-color:transparent}
 .sheet-grab,.mfilters{display:none}
@@ -238,6 +252,12 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
   .cmain:active{opacity:.6}
   .mfilters select,#sort{height:44px;font-size:16px}
   .seg button{min-height:40px}
+  /* 장소 카드를 옆으로 넘긴다. 넘기면 지도가 그 가게로 따라간다 */
+  .peek{left:0;right:0;display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 14px 14px;scrollbar-width:none;overscroll-behavior-x:contain;touch-action:pan-x}
+  .peek::-webkit-scrollbar{display:none}
+  .pcard{flex:none;width:calc(100% - 26px);scroll-snap-align:center;box-shadow:0 4px 12px rgba(0,0,0,.16)}
+  .pcard:only-child{width:100%}
+  .pcount{display:block;position:absolute;right:38px;top:9px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
   /* 장소 카드: 윗줄 저장·다녀옴·코스, 아랫줄 길찾기·구글맵 */
   .peek .pa{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
   .peek .pa>*{width:auto;height:42px}
@@ -247,7 +267,7 @@ select{height:38px;border-radius:8px;border:1px solid var(--line);background:var
   .zoom button{width:46px;height:46px}
 }
 @media (max-width:440px){
-  .peek{grid-template-columns:1fr}
+  .pcard{grid-template-columns:1fr}
   .peek .pa{justify-content:flex-start}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
@@ -565,7 +585,7 @@ function renderCourse(){
           <button data-rm="${p.cid}" aria-label="빼기">${ICON_X}</button>
         </div>
       </div>
-      ${i<stops.length-1 ? `<div class="leg">${fmtKm(legs[i])} · 도보 ${fmtMin(walkMin(legs[i]))} <a href="${gleg(p,stops[i+1])}" target="_blank" rel="noopener">대중교통</a></div>` : ""}`).join("")}
+      ${i<stops.length-1 ? `<div class="leg">걸어서 ${fmtMin(walkMin(legs[i]))} · ${fmtKm(legs[i])} <a href="${gleg(p,stops[i+1])}" target="_blank" rel="noopener">대중교통</a></div>` : ""}`).join("")}
     </div>
     ${stops.length>1 ? `<div class="routes">
       <div class="row"><span class="small" style="color:var(--muted);font-size:12px">전체 경로 이동 수단</span>
@@ -778,18 +798,35 @@ function hover(e){
   const p=byId[cid], r=svg.getBoundingClientRect();
   tip.textContent=`${p.n} · ${typeLabel(p)}`; tip.style.left=(e.clientX-r.left)+"px"; tip.style.top=(e.clientY-r.top)+"px"; tip.style.display="block";
 }
-function renderPeek(){
-  const pk=$("peek"), p=S.sel&&byId[S.sel];
-  $("legend").hidden=!!p; pk.hidden=!p; if(!p) return;
-  pk.style.setProperty("--c",`var(${CVAR[p.c]})`);
-  pk.innerHTML=`<button class="x" id="pkx" aria-label="닫기">×</button>
+// 폰에서는 고른 곳과 가까운 곳들을 한 줄 카드로 만들어 옆으로 넘긴다. 데스크톱은 카드 하나.
+let peekIds=[];
+function peekCard(p, i, n){
+  return `<div class="pcard" data-card="${p.cid}" style="--c:var(${CVAR[p.c]})"><button class="x" data-close aria-label="닫기">×</button>${n>1?`<span class="pcount">${i+1}/${n}</span>`:""}
     <div style="min-width:0"><div class="meta"><span class="cat">${esc(p.c)}</span><span>${esc(typeLabel(p))}</span><span>·</span><span>${esc(hood(p))}</span></div><div class="pn">${esc(p.n)}</div></div>
     <div class="pa">
       <button class="btn save${mk(p.cid).f?" on":""}" data-fav="${p.cid}">${ICON_SAVE(!!mk(p.cid).f)}${mk(p.cid).f?"저장됨":"저장"}</button>
       <button class="ic vis" data-vis="${p.cid}" aria-pressed="${!!mk(p.cid).v}" aria-label="다녀옴" title="다녀옴">${ICON_CHECK}</button>
-      ${courseBtn(p.cid)}<a class="btn" href="${gdir(p)}" target="_blank" rel="noopener">길찾기</a><a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div>`;
-  $("pkx").onclick=()=>{ S.sel=null; renderPeek(); if(S.tab==="list") renderList(); cluCache.s=null; apply(); };
+      ${courseBtn(p.cid)}<a class="btn" href="${gdir(p)}" target="_blank" rel="noopener">길찾기</a><a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`;
 }
+function renderPeek(){
+  const pk=$("peek"), p=S.sel&&byId[S.sel];
+  $("legend").hidden=!!p; pk.hidden=!p; if(!p){ peekIds=[]; pk.innerHTML=""; return; }
+  if (!isMobile()) peekIds=[p.cid];
+  else if (!peekIds.includes(p.cid) || peekIds.length<2) // 새로 고른 곳 기준으로 가까운 12곳
+    peekIds = PLACES.filter(q=>q.show || q===p).map(q=>[km(p,q),q]).sort((a,b)=>a[0]-b[0]).slice(0,12).map(o=>o[1].cid);
+  pk.innerHTML = peekIds.map((id,i)=>peekCard(byId[id], i, peekIds.length)).join("");
+  const c=pk.querySelector(`[data-card="${p.cid}"]`); pk.scrollLeft = c.offsetLeft-(pk.clientWidth-c.offsetWidth)/2;
+}
+function closePeek(){ S.sel=null; renderPeek(); if(S.tab==="list") renderList(); cluCache.s=null; apply(); }
+$("peek").addEventListener("click", e=>{ if(e.target.closest("[data-close]")) closePeek(); });
+// 카드를 넘겨서 멈추면 가운데 카드의 가게를 고르고 지도를 그쪽으로 옮긴다
+let peekT;
+$("peek").addEventListener("scroll", ()=>{ if(!isMobile()) return; clearTimeout(peekT); peekT=setTimeout(()=>{
+  const pk=$("peek"), mid=pk.scrollLeft+pk.clientWidth/2; let best=null, bd=1e9;
+  pk.querySelectorAll("[data-card]").forEach(c=>{ const d=Math.abs(c.offsetLeft+c.offsetWidth/2-mid); if(d<bd){ bd=d; best=c; } });
+  if (!best || best.dataset.card===S.sel) return;
+  S.sel=best.dataset.card; cluCache.s=null; const q=byId[S.sel]; flyTo(q.x,q.y,V.s); if(S.tab==="list") renderList();
+}, 130); });
 function select(cid, center){
   S.sel=cid; cluCache.s=null;
   if (S.tab==="list") renderList(); renderPeek();
@@ -807,6 +844,7 @@ function renderLegend(){
 /* ---------- 주변 추천 ---------- */
 const ICON_LOC = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
 const R = { base:null, key:"" }; // "" = 아직 안 고름, me = 내 위치 기준 추천, h0.. = 동네 하나 전부
+const recOpen=new Set(); let recOpenFor=null; // 동네 목록에서 펼쳐 둔 분류
 // 지역 필터와 같은 동네 (가운데 좌표는 동네 나눌 때 쓴 값)
 const HOODS = [["하라주쿠·오모테산도",35.6690,139.7080],["시부야",35.6598,139.7010],["긴자·유라쿠초",35.6717,139.7640],["아사쿠사",35.7120,139.7960],
   ["츠키지",35.6655,139.7705],["에비스·나카메구로",35.6460,139.7020],["신주쿠",35.6915,139.7025],["아키하바라",35.6984,139.7731],["도요스·오다이바",35.6500,139.7900],
@@ -873,15 +911,21 @@ function renderRec(){
   const n = recSecs.reduce((a,[,arr])=>a+arr.length,0);
   const total=PLACES.filter(p=>p.h===R.base.label).length;
   const hidden = R.key!=="me" && n<total;
+  // 동네 목록은 분류별로 접는다. 동네를 새로 고르면 시간대에 맞는 첫 분류만 펼친다
+  const acc = R.key!=="me";
+  if (acc && recOpenFor!==R.key){ recOpenFor=R.key; recOpen.clear(); const first=recSecs.find(([,arr])=>arr.length); if(first) recOpen.add(first[0]); }
+  const filled = recSecs.filter(([,arr])=>arr.length); if (acc && filled.length===1) recOpen.add(filled[0][0]);
   $("rec").innerHTML = `<div class="rtop"><div><div class="big">${R.key==="me"?`내 위치 근처 추천 ${n}곳`:`${esc(R.base.label)} ${n}곳`}</div>
       <div class="small">도쿄 ${tokyoTime()} · ${R.key==="me"?`${RADIUS}km 안`:"이 동네 전부"}</div></div>
       <button class="btn" id="recadd" ${n<2?"disabled":""}>코스로 담기</button>
       ${hidden?`<div class="rmore"><span class="small">필터 때문에 전체 ${total}곳 중 ${n}곳만 보여요.</span><button class="btn primary" id="recall">필터 풀기</button></div>`:""}</div>`
-    + recSecs.map(([c,arr])=>`<div class="rech"><h3 style="--c:var(${CVAR[c]})"><span class="dot"></span>${REC_NAME[c]||c}</h3><span>${arr.length?"":(R.key==="me"?"근처에 저장한 곳 없음":"이 동네엔 없음")}</span></div>`
+    + recSecs.map(([c,arr])=>(acc ? (arr.length?`<details class="racc" data-acc="${c}" style="--c:var(${CVAR[c]})" ${recOpen.has(c)?"open":""}><summary><span class="dot"></span>${REC_NAME[c]||c}<span class="n">${arr.length}</span></summary>`:"")
+        : `<div class="rech"><h3 style="--c:var(${CVAR[c]})"><span class="dot"></span>${REC_NAME[c]||c}</h3><span>${arr.length?"":"근처에 저장한 곳 없음"}</span></div>`)
       + arr.map(({p,d})=>`<div class="ritem" style="--c:var(${CVAR[p.c]})"><div class="bar"></div>
           <div style="min-width:0"><div class="rn" data-pick="${p.cid}">${mk(p.cid).f?ICON_STAR_S:""}${esc(p.n)}</div>
             <div class="rm">${esc(typeLabel(p))}${R.key==="me"?` · ${fmtKm(d)} · 걸어서 ${fmtMin(walkMin(d))}`:""}${mk(p.cid).v?" · 다녀옴":""}</div></div>
-          <div class="ra">${saveIc(p.cid)}${courseBtn(p.cid)}<a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`).join("")).join("");
+          <div class="ra">${saveIc(p.cid)}${courseBtn(p.cid)}<a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`).join("") + (acc && arr.length ? "</details>" : "")).join("")
+    + (acc && !n ? `<div class="empty" style="margin-top:8px">이 동네에 맞는 곳이 없어요.</div>` : "");
   const all=$("recall"); if(all) all.onclick=clearRecFilters;
   const ra=$("recadd"); if(ra) ra.onclick=()=>{
     // 시간대 순서대로 분류마다 1곳씩(쇼핑은 2곳), 술집은 저녁 이후에만
@@ -912,6 +956,7 @@ $("recbase").addEventListener("click", e=>{
   // 동네 버튼: 그 동네 가게를 전부 보여주고 지도를 거기로 맞춤
   chooseRecArea(k);
 });
+$("rec").addEventListener("toggle", e=>{ const d=e.target; if(!d.dataset || !d.dataset.acc) return; d.open ? recOpen.add(d.dataset.acc) : recOpen.delete(d.dataset.acc); }, true);
 // 전체 화면의 동네 타일은 위쪽 동네 버튼을 누른 것과 같다
 $("rec").addEventListener("click", e=>{ const t=e.target.closest("[data-hood]"); if(t) $("recbase").querySelector(`[data-rb="${t.dataset.hood}"]`).click(); });
 // 내 위치

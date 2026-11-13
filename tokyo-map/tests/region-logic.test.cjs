@@ -182,3 +182,16 @@ test('"전체" and tapping the active neighbourhood again both return to all are
     assert.match(a.element('rec').innerHTML, /도쿄 전체 238곳/);
   }
 });
+
+test('neighbourhood list is an accordion: one category open at first, open state survives re-render', () => {
+  const a = app(); a.choose('h2');
+  const html = () => a.element('rec').innerHTML;
+  assert.equal((html().match(/<details class="racc"/g) || []).length, 4, 'Ginza has four non-empty categories');
+  assert.equal((html().match(/<details class="racc"[^>]* open>/g) || []).length, 1);
+  a.run('recOpen.add("쇼핑"); update();');
+  assert.match(html(), /data-acc="쇼핑"[^>]* open>/);
+  a.choose('h0');
+  assert.equal((html().match(/<details class="racc"[^>]* open>/g) || []).length, 1, 'A new neighbourhood resets what is open');
+  a.run('S.cat="식당"; update();');
+  assert.match(html(), /data-acc="식당"[^>]* open>/, 'A single remaining category is opened');
+});
