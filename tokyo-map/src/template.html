@@ -409,7 +409,7 @@ $("ward").addEventListener("change", e=>{
   S.ward=e.target.value;
   if(S.tab==="rec"){
     const i=HOODS.findIndex(([n])=>n===S.ward);
-    if(i>=0 || S.ward==="전체"){ chooseRecArea(i>=0?"h"+i:"view"); return; }
+    if(i>=0 || S.ward==="전체"){ chooseRecArea(i>=0?"h"+i:""); return; }
     setTab("list");
   }
   update(true);
@@ -665,7 +665,6 @@ function labelFor(p){ let t=labelEls.get(p.cid); if(!t){ t=el("text",{"font-fami
 
 function size(){ const r=svg.getBoundingClientRect(); return [r.width||600, r.height||500]; }
 function apply(){
-  recFollow();
   g.setAttribute("transform",`translate(${V.tx},${V.ty}) scale(${V.s})`);
   const z=V.s/fitS, inv=1/V.s;
   // 바탕 선 굵기
@@ -801,7 +800,7 @@ function renderLegend(){
 
 /* ---------- 주변 추천 ---------- */
 const ICON_LOC = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
-const R = { base:null, key:"view" }; // view = 지금 지도 화면을 따라감, me = 내 위치 기준, h0.. = 동네 하나
+const R = { base:null, key:"" }; // "" = 아직 안 고름, me = 내 위치 기준 추천, h0.. = 동네 하나 전부
 // 지역 필터와 같은 동네 (가운데 좌표는 동네 나눌 때 쓴 값)
 const HOODS = [["하라주쿠·오모테산도",35.6690,139.7080],["시부야",35.6598,139.7010],["긴자·유라쿠초",35.6717,139.7640],["아사쿠사",35.7120,139.7960],
   ["츠키지",35.6655,139.7705],["에비스·나카메구로",35.6460,139.7020],["신주쿠",35.6915,139.7025],["아키하바라",35.6984,139.7731],["도요스·오다이바",35.6500,139.7900],
@@ -812,22 +811,16 @@ function syncRecWard(){
   $("ward").value=S.ward;
 }
 function chooseRecArea(k){
-  R.key=k;
-  if(k!=="view"){ const [n,lat,lng]=HOODS[+k.slice(1)]; R.base={lat,lng,label:n}; }
+  R.key=k; // "h0".. 동네, "" 선택 없음
+  if(k){ const [n,lat,lng]=HOODS[+k.slice(1)]; R.base={lat,lng,label:n}; } else R.base=null;
   syncRecWard(); update(); drawBase();
-  if(k!=="view") focusRec();
+  if(k) focusRec();
 }
-function showRecList(){
-  if(!R.key.startsWith("h") || !R.base) return;
-  S.ward=R.base.label; S.cat="전체"; S.subs.clear(); S.q=""; S.only="all";
-  $("ward").value=S.ward; $("q").value="";
+function clearRecFilters(){
+  S.cat="전체"; S.subs.clear(); S.q=""; S.only="all"; $("q").value="";
   document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.only==="all"));
-  setTab("list"); if(isMobile()) setSheet("max"); update(true);
+  update();
 }
-// 지도를 옮기거나 확대하면 잠깐 뒤 추천을 다시 고른다
-function recFollow(){ clearTimeout(window.__recT); window.__recT=setTimeout(()=>{ if(S.tab==="rec" && R.key==="view") renderRec(); }, 180); }
-// 위 검색줄과 아래 시트에 가리지 않고 화면에 보이는가
-function onScreen(p){ const [w,h]=size(), {t,b}=insets(), sx=p.x*V.s+V.tx, sy=p.y*V.s+V.ty; return sx>=0 && sx<=w && sy>=t && sy<=h-b; }
 const RADIUS = 2; // km
 const REC_N = {"식당":3,"카페·디저트":3,"술집":2,"쇼핑":4};
 const REC_NAME = {"식당":"밥","카페·디저트":"카페·디저트","술집":"한잔","쇼핑":"쇼핑"};
@@ -843,8 +836,11 @@ function recOrder(h){
 }
 // 가까운 순으로 고르되 ★는 앞당기고, 같은 종류가 겹치면 뒤로 미룬다
 function pickNear(cat, base){
-  const k = R.key, inArea = p => k==="view" ? onScreen(p) : k==="me" ? true : p.h===base.label;
-  const cand = PLACES.filter(p=>p.show && p.c===cat && !mk(p.cid).v && inArea(p)).map(p=>({p, d:km(base,p)})).filter(o=>k!=="me" || o.d<=RADIUS);
+  // 동네 버튼: 그 동네에 있는 곳 전부 (다녀온 곳은 맨 뒤, 저장한 곳 먼저, 그다음 가까운 순)
+  if (R.key!=="me") return PLACES.filter(p=>p.show && p.c===cat && p.h===base.label).map(p=>({p, d:km(base,p)}))
+    .sort((a,b)=>(!!mk(a.p.cid).v-!!mk(b.p.cid).v) || (!!mk(b.p.cid).f-!!mk(a.p.cid).f) || a.d-b.d);
+  // 내 위치: 2km 안에서 몇 곳만 추천
+  const cand = PLACES.filter(p=>p.show && p.c===cat && !mk(p.cid).v).map(p=>({p, d:km(base,p)})).filter(o=>o.d<=RADIUS);
   const out=[], used=new Map();
   while (out.length<REC_N[cat] && cand.length){
     let bi=0, bs=1e9;
@@ -856,28 +852,29 @@ function pickNear(cat, base){
 let recSecs=[];
 function renderRec(){
   $("recbase").innerHTML = `<button class="chip" data-rb="me" aria-pressed="${R.key==="me"}">${ICON_LOC}내 위치</button>`
-    + `<button class="chip" data-rb="view" aria-pressed="${R.key==="view"}">지도 화면</button>`
     + HOODS.map(([n],i)=>`<button class="chip" data-rb="h${i}" aria-pressed="${R.key==="h"+i}">${n}</button>`).join("");
-  if (R.key==="view") R.base={...viewCenter(), label:"지도 화면"};
-  if (!R.base){ recSecs=[]; $("rec").innerHTML = `<div class="empty">동네를 고르면 근처에 저장한 곳을 보여줘요.</div>`; return; }
+  if (!R.base){ recSecs=[]; $("rec").innerHTML = `<div class="empty">동네를 누르면 그 동네에 저장한 곳을 모두 보여줘요.</div>`; return; }
   const h=tokyoHour();
-  recSecs = recOrder(h).filter(c=>S.cat==="전체" || c===S.cat).map(c=>[c, pickNear(c, R.base)]);
+  // 동네 전부 보기에서는 숙소·관광처럼 추천에 안 쓰는 분류도 뒤에 붙인다
+  const order = R.key==="me" ? recOrder(h) : [...recOrder(h), ...CATS.map(c=>c[0]).filter(c=>!REC_N[c])];
+  recSecs = order.filter(c=>S.cat==="전체" || c===S.cat).map(c=>[c, pickNear(c, R.base)]).filter(([c,arr])=>REC_N[c] || arr.length);
   const n = recSecs.reduce((a,[,arr])=>a+arr.length,0);
   const total=PLACES.filter(p=>p.h===R.base.label).length;
-  $("rec").innerHTML = `<div class="rtop"><div><div class="big">${R.key==="view"?`화면 안에서 추천 ${n}곳`:R.key==="me"?`내 위치 근처 추천 ${n}곳`:`${esc(R.base.label)} 추천 ${n}곳`}</div>
-      <div class="small">도쿄 ${tokyoTime()} · ${R.key==="view"?"화면 가운데에서 가까운 순":R.key==="me"?`${RADIUS}km 안`:"동네 가운데에서 가까운 순"}</div></div>
+  const hidden = R.key!=="me" && n<total;
+  $("rec").innerHTML = `<div class="rtop"><div><div class="big">${R.key==="me"?`내 위치 근처 추천 ${n}곳`:`${esc(R.base.label)} ${n}곳`}</div>
+      <div class="small">도쿄 ${tokyoTime()} · ${R.key==="me"?`${RADIUS}km 안`:"이 동네 전부"}</div></div>
       <button class="btn" id="recadd" ${n<2?"disabled":""}>코스로 담기</button>
-      ${R.key.startsWith("h")?`<div class="rmore"><span class="small">추천은 일부만 골라 보여줘요.</span><button class="btn primary" id="recall" aria-label="${esc(R.base.label)} 전체 ${total}곳 보기" title="검색·분류·저장 상태 필터를 해제하고 이 지역의 전체 목록을 봐요">전체 ${total}곳 보기</button></div>`:""}</div>`
-    + recSecs.map(([c,arr])=>`<div class="rech"><h3 style="--c:var(${CVAR[c]})"><span class="dot"></span>${REC_NAME[c]}</h3><span>${arr.length?"":(R.key==="view"?"화면 안에 없음":R.key==="me"?"근처에 저장한 곳 없음":"이 동네엔 없음")}</span></div>`
+      ${hidden?`<div class="rmore"><span class="small">필터 때문에 전체 ${total}곳 중 ${n}곳만 보여요.</span><button class="btn primary" id="recall">필터 풀기</button></div>`:""}</div>`
+    + recSecs.map(([c,arr])=>`<div class="rech"><h3 style="--c:var(${CVAR[c]})"><span class="dot"></span>${REC_NAME[c]||c}</h3><span>${arr.length?"":(R.key==="me"?"근처에 저장한 곳 없음":"이 동네엔 없음")}</span></div>`
       + arr.map(({p,d})=>`<div class="ritem" style="--c:var(${CVAR[p.c]})"><div class="bar"></div>
           <div style="min-width:0"><div class="rn" data-pick="${p.cid}">${mk(p.cid).f?ICON_STAR_S:""}${esc(p.n)}</div>
-            <div class="rm">${esc(typeLabel(p))} · ${fmtKm(d)} · 걸어서 ${fmtMin(walkMin(d))}</div></div>
+            <div class="rm">${esc(typeLabel(p))}${R.key==="me"?` · ${fmtKm(d)} · 걸어서 ${fmtMin(walkMin(d))}`:""}${mk(p.cid).v?" · 다녀옴":""}</div></div>
           <div class="ra">${saveIc(p.cid)}${courseBtn(p.cid)}<a class="btn primary" href="${gmap(p)}" target="_blank" rel="noopener">구글맵</a></div></div>`).join("")).join("");
-  const all=$("recall"); if(all) all.onclick=showRecList;
+  const all=$("recall"); if(all) all.onclick=clearRecFilters;
   const ra=$("recadd"); if(ra) ra.onclick=()=>{
     // 시간대 순서대로 분류마다 1곳씩(쇼핑은 2곳), 술집은 저녁 이후에만
     const night = h>=17 || h<4, d=day();
-    recSecs.forEach(([c,arr])=>{ if(c==="술집" && !night) return; arr.slice(0, c==="쇼핑"?2:1).forEach(({p})=>{ if(!d.ids.includes(p.cid)) d.ids.push(p.cid); }); });
+    recSecs.forEach(([c,arr])=>{ if(!REC_N[c] || (c==="술집" && !night)) return; arr.slice(0, c==="쇼핑"?2:1).forEach(({p})=>{ if(!d.ids.includes(p.cid)) d.ids.push(p.cid); }); });
     saveCourse(); refreshCourseBits(); setTab("course");
   };
 }
@@ -898,7 +895,7 @@ $("recbase").addEventListener("click", e=>{
   const b=e.target.closest("[data-rb]"); if(!b) return; const k=b.dataset.rb;
   if (k==="me"){ locate(true); return; }
   if(isMobile() && sheetState!=="mid") setSheet("mid");
-  // 지도 화면: 지도를 따라감 / 동네 버튼: 그 동네 가게만 고르고 지도를 거기로 맞춤
+  // 동네 버튼: 그 동네 가게를 전부 보여주고 지도를 거기로 맞춤
   chooseRecArea(k);
 });
 // 내 위치
